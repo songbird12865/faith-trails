@@ -253,14 +253,18 @@
     }
 
     function startBuild() {
-      tray = shuffle(scene.verse.split(' '));
+      // Each word gets a unique id (not just its text) so verses with
+      // repeated words (like "the" or "and") can be moved individually
+      // without ambiguity.
+      tray = shuffle(scene.verse.split(' ').map((word, id) => ({ id, word })));
       assembled = [];
       drawBuild();
     }
 
     function drawBuild() {
       sceneContainer.innerHTML = `
-        <p class="font-display text-xl font-700 text-trailgreendark mb-4">Tap the words in the right order!</p>
+        <p class="font-display text-xl font-700 text-trailgreendark mb-2">Tap the words in the right order!</p>
+        <p class="text-sm text-inkbrown/60 mb-4">Tap a word you've already placed to move it back.</p>
         <div id="assembly-line" class="min-h-[64px] w-full max-w-lg mx-auto bg-trailsky/10 border-4 border-dashed border-trailsky/40 rounded-2xl p-3 mb-6 flex flex-wrap gap-2 justify-center items-center"></div>
         <div id="word-tray" class="flex flex-wrap gap-2 justify-center max-w-lg mx-auto"></div>
         <p id="build-feedback" class="mt-4 font-700 min-h-[1.5rem]"></p>
@@ -270,25 +274,30 @@
       const assemblyLine = document.getElementById('assembly-line');
       const wordTray = document.getElementById('word-tray');
 
-      assembled.forEach(w => {
-        const chip = document.createElement('span');
-        chip.className = 'bg-trailgreen text-parchment font-700 px-3 py-1.5 rounded-lg';
-        chip.textContent = w;
+      assembled.forEach(item => {
+        const chip = document.createElement('button');
+        chip.className = 'bg-trailgreen text-parchment font-700 px-3 py-1.5 rounded-lg hover:bg-trailgreendark transition-colors';
+        chip.textContent = item.word;
+        chip.title = 'Tap to move back';
+        chip.onclick = () => {
+          assembled = assembled.filter(w => w.id !== item.id);
+          tray.push(item);
+          document.getElementById('build-feedback').textContent = '';
+          drawBuild();
+        };
         assemblyLine.appendChild(chip);
       });
 
-      tray.forEach((word, idx) => {
+      tray.forEach(item => {
         const btn = document.createElement('button');
         btn.className = 'bg-white border-2 border-trailgold rounded-lg px-3 py-1.5 font-700 shadow hover:scale-105 transition-transform';
-        btn.textContent = word;
+        btn.textContent = item.word;
         btn.onclick = () => {
-          assembled.push(word);
-          tray = tray.filter((_, i) => i !== idx);
+          assembled.push(item);
+          tray = tray.filter(w => w.id !== item.id);
+          drawBuild();
           if (tray.length === 0) {
-            drawBuild();
             checkAssembled();
-          } else {
-            drawBuild();
           }
         };
         wordTray.appendChild(btn);
@@ -297,21 +306,22 @@
 
     function checkAssembled() {
       const feedback = document.getElementById('build-feedback');
-      const correct = assembled.join(' ') === scene.verse;
+      const correct = assembled.map(item => item.word).join(' ') === scene.verse;
       if (correct) {
         feedback.textContent = 'You got it! \ud83c\udf89';
         feedback.className = 'mt-4 font-700 min-h-[1.5rem] text-trailgreen';
         setTimeout(() => { step = 'reference'; showReference(); }, 900);
       } else {
-        feedback.textContent = "Not quite \u2014 let's try again!";
+        feedback.textContent = "Not quite \u2014 fix a word above, or start over!";
         feedback.className = 'mt-4 font-700 min-h-[1.5rem] text-trailgold';
         const retryBtn = document.createElement('button');
         retryBtn.className = 'bg-trailgold hover:bg-trailgold/80 text-inkbrown font-display font-700 px-6 py-2 rounded-full shadow mt-2';
-        retryBtn.textContent = 'Try Again';
+        retryBtn.textContent = 'Start Over';
         retryBtn.onclick = startBuild;
         sceneControls.appendChild(retryBtn);
       }
     }
+
 
     function showReference() {
       sceneContainer.innerHTML = `
