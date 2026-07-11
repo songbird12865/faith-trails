@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% block title %}Trail Map{% endblock %}
+
+{% block content %}
+
+<div class="text-center mb-6">
+  <p id="profile-display" class="font-display text-lg text-trailgreendark">
+    Hi, <span id="profile-name">{{ profile['name'] }}</span>!
+    <button id="edit-name-btn" class="text-sm text-trailsky underline font-body font-600 ml-1">Change name</button>
+  </p>
+  <form id="profile-form" class="hidden justify-center items-center gap-2 mt-2" >
+    <input id="profile-name-input" type="text" value="{{ profile['name'] }}" maxlength="30"
+           class="border-2 border-trailgold rounded-lg px-3 py-1.5 font-body text-center" />
+    <button type="submit" class="bg-trailgreen hover:bg-trailgreendark text-parchment font-700 px-4 py-1.5 rounded-lg">Save</button>
+    <button type="button" id="cancel-name-btn" class="text-inkbrown/60 font-700 px-2">Cancel</button>
+  </form>
+  <p id="profile-feedback" class="text-sm font-700 mt-1 min-h-[1.25rem]"></p>
+</div>
+
+<h1 class="font-display text-3xl sm:text-4xl font-800 text-trailgreendark text-center mb-2">
+  Your Trail Map
+</h1>
+<p class="text-center text-inkbrown/70 mb-10 font-600">
+  Follow the path and earn a badge for every story you complete!
+</p>
+
+<div class="trail-path" id="trail-path">
+  <svg id="trail-svg" class="trail-svg" aria-hidden="true">
+    <path id="trail-line"></path>
+  </svg>
+  {% for q in quests %}
+    {% set is_earned = q['id'] in earned %}
+    <div class="trail-node">
+      <div class="trail-marker group {{ 'trail-marker-locked' if not q['is_available'] }}">
+        <a href="{{ url_for('quest', slug=q['slug']) }}" class="trail-marker-circle-link"
+           aria-label="{{ q['title'] }}{{ '' if q['is_available'] else ' (coming soon)' }}">
+          <span class="trail-marker-circle {{ 'trail-marker-earned' if is_earned else '' }}">
+            <img src="{{ url_for('static', filename='img/quests/' ~ q['slug'] ~ '.jpg') }}"
+                 alt="" class="trail-marker-art" aria-hidden="true">
+            <span class="trail-marker-number">{{ q['sort_order'] }}</span>
+            {% if is_earned %}
+              <span class="trail-marker-badge" title="Badge earned!">✓</span>
+            {% elif not q['is_available'] %}
+              <span class="trail-marker-badge trail-marker-badge-lock" title="Coming soon">🔒</span>
+            {% endif %}
+          </span>
+        </a>
+        <span class="trail-marker-label">
+          <a href="{{ url_for('quest', slug=q['slug']) }}" class="font-display font-700 text-base sm:text-lg text-trailgreendark group-hover:text-trailsky transition-colors">{{ q['title'] }}</a>
+          <span class="block text-xs sm:text-sm text-inkbrown/70 font-600">{{ q['summary'] }}</span>
+          {% if not q['is_available'] %}
+            <span class="block text-xs uppercase tracking-wide text-trailgold font-800 mt-1">Coming soon</span>
+          {% elif is_earned %}
+            <span class="flex items-center justify-center gap-2 mt-1">
+              <span class="text-xs uppercase tracking-wide text-trailgreen font-800">Badge earned!</span>
+              <button class="reset-badge-btn text-xs text-inkbrown/50 underline hover:text-inkbrown" data-slug="{{ q['slug'] }}" data-title="{{ q['title'] }}">
+                &#8635; Reset
+              </button>
+            </span>
+          {% endif %}
+        </span>
+      </div>
+    </div>
+  {% endfor %}
+</div>
+
+<script src="{{ url_for('static', filename='js/trail-path.js') }}"></script>
+<script>
+  // --- UPDATE: edit the profile name ---
+  const editBtn = document.getElementById('edit-name-btn');
+  const cancelBtn = document.getElementById('cancel-name-btn');
+  const profileForm = document.getElementById('profile-form');
+  const profileDisplay = document.getElementById('profile-display');
+  const profileFeedback = document.getElementById('profile-feedback');
+  const nameInput = document.getElementById('profile-name-input');
+
+  editBtn.addEventListener('click', () => {
+    profileDisplay.classList.add('hidden');
+    profileForm.classList.remove('hidden');
+    profileForm.classList.add('flex');
+    nameInput.focus();
+    nameInput.select();
+  });
+
+  cancelBtn.addEventListener('click', () => {
+    profileForm.classList.add('hidden');
+    profileForm.classList.remove('flex');
+    profileDisplay.classList.remove('hidden');
+  });
+
+  profileForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const newName = nameInput.value.trim();
+    if (!newName) return;
+
+    try {
+      const res = await fetch('/api/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newName }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        document.getElementById('profile-name').textContent = data.name;
+        profileForm.classList.add('hidden');
+        profileForm.classList.remove('flex');
+        profileDisplay.classList.remove('hidden');
+        profileFeedback.textContent = 'Name updated!';
+        profileFeedback.className = 'text-sm font-700 mt-1 min-h-[1.25rem] text-trailgreen';
+        setTimeout(() => { profileFeedback.textContent = ''; }, 2000);
+      }
+    } catch (err) {
+      profileFeedback.textContent = 'Could not save right now.';
+      profileFeedback.className = 'text-sm font-700 mt-1 min-h-[1.25rem] text-trailgold';
+    }
+  });
+
+  // --- DELETE: reset an earned badge ---
+  document.querySelectorAll('.reset-badge-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const slug = btn.dataset.slug;
+      const title = btn.dataset.title;
+      if (!confirm(`Reset your badge for "${title}"? You'll need to complete the quest again to earn it back.`)) {
+        return;
+      }
+      try {
+        const res = await fetch(`/api/reset/${slug}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (data.success) {
+          location.reload();
+        }
+      } catch (err) {
+        alert('Could not reset the badge right now. Please try again.');
+      }
+    });
+  });
+</script>
+
+{% endblock %}

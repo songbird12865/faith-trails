@@ -1,0 +1,372 @@
+{% extends "base.html" %}
+{% block title %}{{ quest['title'] }}{% endblock %}
+
+{% block content %}
+
+<a href="{{ url_for('home') }}" class="inline-flex items-center gap-1 text-trailgreen font-700 mb-6 hover:text-trailsky transition-colors">
+  &larr; Back to Trail Map
+</a>
+
+<div id="quest-card" class="bg-white/70 border-4 border-trailgold/40 rounded-3xl shadow-lg p-6 sm:p-10 min-h-[420px] flex flex-col">
+
+  <!-- Progress dots -->
+  <div id="progress-dots" class="flex justify-center gap-2 mb-6"></div>
+
+  <div id="scene-container" class="flex-1 flex flex-col items-center justify-center text-center"></div>
+
+  <div id="scene-controls" class="mt-8 flex justify-center"></div>
+
+</div>
+
+<script>
+  const scenes = {{ scenes_json | safe }};
+  const questLesson = {{ lesson | tojson }};
+  const questSlug = {{ quest['slug'] | tojson }};
+  const questIcon = {{ quest['icon'] | tojson }};
+
+  let current = 0;
+  let placedCount = 0;
+
+  const sceneContainer = document.getElementById('scene-container');
+  const sceneControls = document.getElementById('scene-controls');
+  const progressDots = document.getElementById('progress-dots');
+
+  function renderDots() {
+    progressDots.innerHTML = '';
+    const total = scenes.length + 1; // +1 for the final badge scene
+    for (let i = 0; i < total; i++) {
+      const dot = document.createElement('span');
+      dot.className = 'w-2.5 h-2.5 rounded-full ' +
+        (i <= current ? 'bg-trailgreen' : 'bg-trailgreen/25');
+      progressDots.appendChild(dot);
+    }
+  }
+
+  function renderScene() {
+    renderDots();
+    sceneControls.innerHTML = '';
+
+    if (current >= scenes.length) {
+      renderBadgeScene();
+      return;
+    }
+
+    const scene = scenes[current];
+
+    if (scene.type === 'story') {
+      sceneContainer.innerHTML = `
+        <div class="text-6xl sm:text-7xl mb-6" aria-hidden="true">${scene.emoji}</div>
+        <p class="font-body text-lg sm:text-xl leading-relaxed max-w-md">${scene.text}</p>
+      `;
+      const nextBtn = document.createElement('button');
+      nextBtn.className = 'bg-trailgreen hover:bg-trailgreendark text-parchment font-display font-700 text-lg px-8 py-3 rounded-full shadow transition-colors';
+      nextBtn.textContent = 'Next →';
+      nextBtn.onclick = () => { current++; renderScene(); };
+      sceneControls.appendChild(nextBtn);
+
+    } else if (scene.type === 'interactive' && scene.subtype === 'matching') {
+      renderMatchingScene(scene);
+
+    } else if (scene.type === 'interactive' && scene.subtype === 'color_picker') {
+      renderColorPickerScene(scene);
+
+    } else if (scene.type === 'quiz') {
+      renderQuizScene(scene);
+
+    } else if (scene.type === 'memory_verse') {
+      renderMemoryVerseScene(scene);
+    }
+  }
+
+  function renderMatchingScene(scene) {
+    placedCount = 0;
+
+    sceneContainer.innerHTML = `
+      <p class="font-display text-xl font-700 text-trailgreendark mb-6">${scene.prompt}</p>
+      <div id="drop-zone" class="w-full max-w-sm mx-auto bg-trailsky/10 border-4 border-dashed border-trailsky/50 rounded-2xl p-4 mb-6 flex flex-wrap gap-2 justify-center min-h-[90px]">
+        <span id="drop-zone-hint" class="text-trailsky/70 font-600 self-center">Drop or tap animals here &rarr;</span>
+      </div>
+      <div id="item-tray" class="flex flex-wrap gap-4 justify-center"></div>
+    `;
+
+    const tray = document.getElementById('item-tray');
+    const dropZone = document.getElementById('drop-zone');
+
+    dropZone.addEventListener('dragover', (e) => e.preventDefault());
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      const id = e.dataTransfer.getData('text/plain');
+      placeItem(id);
+    });
+
+    scene.items.forEach(item => {
+      const el = document.createElement('button');
+      el.id = 'item-' + item.id;
+      el.draggable = true;
+      el.className = 'bg-white border-2 border-trailgold rounded-xl px-3 py-2 flex flex-col items-center shadow hover:scale-105 transition-transform cursor-grab active:cursor-grabbing';
+      el.innerHTML = `<span class="text-3xl" aria-hidden="true">${item.emoji}</span><span class="text-xs font-700 mt-1">${item.label}</span>`;
+
+      // Drag support (desktop)
+      el.addEventListener('dragstart', (e) => {
+        e.dataTransfer.setData('text/plain', item.id);
+      });
+
+      // Tap-to-place support (touch devices / accessibility)
+      el.addEventListener('click', () => placeItem(item.id));
+
+      tray.appendChild(el);
+    });
+
+    // No "Next" button here — it appears automatically once every item is placed.
+  }
+
+  function placeItem(id) {
+    const el = document.getElementById('item-' + id);
+    if (!el || el.dataset.placed === 'true') return;
+
+    el.dataset.placed = 'true';
+    el.disabled = true;
+    el.classList.add('opacity-40', 'pointer-events-none');
+
+    const hint = document.getElementById('drop-zone-hint');
+    if (hint) hint.remove();
+
+    const dropZone = document.getElementById('drop-zone');
+    const placedIcon = document.createElement('span');
+    placedIcon.className = 'text-3xl';
+    placedIcon.textContent = el.querySelector('span').textContent;
+    dropZone.appendChild(placedIcon);
+
+    placedCount++;
+
+    const scene = scenes[current];
+    if (placedCount >= scene.items.length) {
+      const nextBtn = document.createElement('button');
+      nextBtn.className = 'bg-trailgreen hover:bg-trailgreendark text-parchment font-display font-700 text-lg px-8 py-3 rounded-full shadow transition-colors mt-2';
+      nextBtn.textContent = 'Next →';
+      nextBtn.onclick = () => { current++; renderScene(); };
+      sceneControls.innerHTML = '';
+      sceneControls.appendChild(nextBtn);
+    }
+  }
+
+  function renderColorPickerScene(scene) {
+    const stripeColors = new Array(scene.target_count).fill(null);
+
+    function draw() {
+      const stripesHtml = stripeColors
+        .map(c => `<div class="coat-stripe" style="background:${c || '#EFE6D0'}"></div>`)
+        .join('');
+
+      sceneContainer.innerHTML = `
+        <p class="font-display text-xl font-700 text-trailgreendark mb-4 max-w-md">${scene.prompt}</p>
+        <div id="coat-preview" class="flex flex-col w-40 mx-auto mb-6 rounded-lg overflow-hidden border-4 border-trailgold shadow">${stripesHtml}</div>
+        <div id="color-palette" class="flex flex-wrap gap-3 justify-center max-w-md mx-auto"></div>
+      `;
+      sceneControls.innerHTML = '';
+
+      const palette = document.getElementById('color-palette');
+      scene.palette.forEach(color => {
+        const btn = document.createElement('button');
+        btn.className = 'w-10 h-10 rounded-full border-2 border-white shadow hover:scale-110 transition-transform';
+        btn.style.background = color.hex;
+        btn.setAttribute('aria-label', color.name);
+        btn.title = color.name;
+        btn.onclick = () => {
+          const nextEmpty = stripeColors.findIndex(c => c === null);
+          if (nextEmpty === -1) return;
+          stripeColors[nextEmpty] = color.hex;
+          draw();
+          if (stripeColors.every(c => c !== null)) {
+            const nextBtn = document.createElement('button');
+            nextBtn.className = 'bg-trailgreen hover:bg-trailgreendark text-parchment font-display font-700 text-lg px-8 py-3 rounded-full shadow transition-colors mt-2';
+            nextBtn.textContent = 'Next \u2192';
+            nextBtn.onclick = () => { current++; renderScene(); };
+            sceneControls.appendChild(nextBtn);
+          }
+        };
+        palette.appendChild(btn);
+      });
+    }
+
+    draw();
+  }
+
+  function renderQuizScene(scene) {
+    sceneContainer.innerHTML = `
+      <div class="text-5xl mb-4" aria-hidden="true">🤔</div>
+      <p class="font-display text-xl font-700 text-trailgreendark mb-6 max-w-md">${scene.prompt}</p>
+      <div id="quiz-options" class="flex flex-col gap-3 max-w-md mx-auto w-full"></div>
+      <p id="quiz-feedback" class="mt-4 font-700 min-h-[1.5rem]"></p>
+    `;
+    sceneControls.innerHTML = '';
+
+    const optionsContainer = document.getElementById('quiz-options');
+    scene.options.forEach((opt, idx) => {
+      const btn = document.createElement('button');
+      btn.className = 'bg-white border-2 border-trailgold rounded-xl px-4 py-3 font-700 text-left shadow hover:bg-trailgold/10 transition-colors';
+      btn.textContent = opt;
+      btn.onclick = () => {
+        const feedback = document.getElementById('quiz-feedback');
+        if (idx === scene.correct_index) {
+          feedback.textContent = 'That\u2019s right! \ud83c\udf89';
+          feedback.className = 'mt-4 font-700 min-h-[1.5rem] text-trailgreen';
+          btn.classList.add('border-trailgreen', 'bg-trailgreen/10');
+          setTimeout(() => { current++; renderScene(); }, 700);
+        } else {
+          feedback.textContent = 'Not quite \u2014 try again!';
+          feedback.className = 'mt-4 font-700 min-h-[1.5rem] text-trailgold';
+        }
+      };
+      optionsContainer.appendChild(btn);
+    });
+  }
+
+  function renderMemoryVerseScene(scene) {
+    let step = 'learn'; // 'learn' -> 'build' -> 'reference'
+    let tray = [];
+    let assembled = [];
+
+    function shuffle(arr) {
+      const a = [...arr];
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    function showLearn() {
+      sceneContainer.innerHTML = `
+        <div class="text-5xl mb-4" aria-hidden="true">📖</div>
+        <p class="font-display text-2xl font-800 text-trailgreendark mb-4">Let's learn a memory verse!</p>
+        <blockquote class="font-body text-xl italic max-w-md mb-2">&ldquo;${scene.verse}&rdquo;</blockquote>
+        <p class="font-display font-700 text-trailsky mb-4">${scene.reference}</p>
+        <p class="text-sm text-inkbrown/60 max-w-sm">Read it a few times. When you're ready, let's put it back together!</p>
+      `;
+      sceneControls.innerHTML = '';
+      const btn = document.createElement('button');
+      btn.className = 'bg-trailgreen hover:bg-trailgreendark text-parchment font-display font-700 text-lg px-8 py-3 rounded-full shadow transition-colors';
+      btn.textContent = "I'm ready \u2192";
+      btn.onclick = () => { step = 'build'; startBuild(); };
+      sceneControls.appendChild(btn);
+    }
+
+    function startBuild() {
+      tray = shuffle(scene.verse.split(' '));
+      assembled = [];
+      drawBuild();
+    }
+
+    function drawBuild() {
+      sceneContainer.innerHTML = `
+        <p class="font-display text-xl font-700 text-trailgreendark mb-4">Tap the words in the right order!</p>
+        <div id="assembly-line" class="min-h-[64px] w-full max-w-lg mx-auto bg-trailsky/10 border-4 border-dashed border-trailsky/40 rounded-2xl p-3 mb-6 flex flex-wrap gap-2 justify-center items-center"></div>
+        <div id="word-tray" class="flex flex-wrap gap-2 justify-center max-w-lg mx-auto"></div>
+        <p id="build-feedback" class="mt-4 font-700 min-h-[1.5rem]"></p>
+      `;
+      sceneControls.innerHTML = '';
+
+      const assemblyLine = document.getElementById('assembly-line');
+      const wordTray = document.getElementById('word-tray');
+
+      assembled.forEach(w => {
+        const chip = document.createElement('span');
+        chip.className = 'bg-trailgreen text-parchment font-700 px-3 py-1.5 rounded-lg';
+        chip.textContent = w;
+        assemblyLine.appendChild(chip);
+      });
+
+      tray.forEach((word, idx) => {
+        const btn = document.createElement('button');
+        btn.className = 'bg-white border-2 border-trailgold rounded-lg px-3 py-1.5 font-700 shadow hover:scale-105 transition-transform';
+        btn.textContent = word;
+        btn.onclick = () => {
+          assembled.push(word);
+          tray = tray.filter((_, i) => i !== idx);
+          if (tray.length === 0) {
+            drawBuild();
+            checkAssembled();
+          } else {
+            drawBuild();
+          }
+        };
+        wordTray.appendChild(btn);
+      });
+    }
+
+    function checkAssembled() {
+      const feedback = document.getElementById('build-feedback');
+      const correct = assembled.join(' ') === scene.verse;
+      if (correct) {
+        feedback.textContent = 'You got it! \ud83c\udf89';
+        feedback.className = 'mt-4 font-700 min-h-[1.5rem] text-trailgreen';
+        setTimeout(() => { step = 'reference'; showReference(); }, 900);
+      } else {
+        feedback.textContent = "Not quite \u2014 let's try again!";
+        feedback.className = 'mt-4 font-700 min-h-[1.5rem] text-trailgold';
+        const retryBtn = document.createElement('button');
+        retryBtn.className = 'bg-trailgold hover:bg-trailgold/80 text-inkbrown font-display font-700 px-6 py-2 rounded-full shadow mt-2';
+        retryBtn.textContent = 'Try Again';
+        retryBtn.onclick = startBuild;
+        sceneControls.appendChild(retryBtn);
+      }
+    }
+
+    function showReference() {
+      sceneContainer.innerHTML = `
+        <div class="text-5xl mb-4" aria-hidden="true">📍</div>
+        <p class="font-display text-xl font-700 text-trailgreendark mb-2">Great job! Now &mdash; where is this verse found?</p>
+        <blockquote class="font-body italic mb-6 max-w-md">&ldquo;${scene.verse}&rdquo;</blockquote>
+        <div id="reference-options" class="flex flex-col gap-3 max-w-xs mx-auto w-full"></div>
+        <p id="reference-feedback" class="mt-4 font-700 min-h-[1.5rem]"></p>
+      `;
+      sceneControls.innerHTML = '';
+
+      const optionsContainer = document.getElementById('reference-options');
+      shuffle(scene.reference_options).forEach(opt => {
+        const btn = document.createElement('button');
+        btn.className = 'bg-white border-2 border-trailgold rounded-xl px-4 py-3 font-700 shadow hover:bg-trailgold/10 transition-colors';
+        btn.textContent = opt;
+        btn.onclick = () => {
+          const feedback = document.getElementById('reference-feedback');
+          if (opt === scene.reference) {
+            feedback.textContent = 'That\u2019s right! \ud83c\udf89';
+            feedback.className = 'mt-4 font-700 min-h-[1.5rem] text-trailgreen';
+            btn.classList.add('border-trailgreen', 'bg-trailgreen/10');
+            setTimeout(() => { current++; renderScene(); }, 800);
+          } else {
+            feedback.textContent = 'Not quite \u2014 try another one!';
+            feedback.className = 'mt-4 font-700 min-h-[1.5rem] text-trailgold';
+          }
+        };
+        optionsContainer.appendChild(btn);
+      });
+    }
+
+    showLearn();
+  }
+
+  function renderBadgeScene() {
+    sceneContainer.innerHTML = `
+      <div class="text-7xl mb-4 animate-bounce" aria-hidden="true">${questIcon}</div>
+      <h2 class="font-display text-2xl font-800 text-trailgreendark mb-3">Badge earned!</h2>
+      <p class="font-body text-lg max-w-md mb-2">${questLesson}</p>
+    `;
+    const homeBtn = document.createElement('a');
+    homeBtn.href = "{{ url_for('home') }}";
+    homeBtn.className = 'bg-trailgold hover:bg-trailgold/80 text-inkbrown font-display font-700 text-lg px-8 py-3 rounded-full shadow transition-colors';
+    homeBtn.textContent = 'Back to Trail Map';
+    sceneControls.appendChild(homeBtn);
+
+    // Save the badge to the database
+    fetch(`/api/complete/${questSlug}`, { method: 'POST' }).catch(() => {
+      // Non-fatal for the MVP: the child still sees their badge on screen
+      // even if the save request fails (e.g. offline).
+    });
+  }
+
+  renderScene();
+</script>
+
+{% endblock %}

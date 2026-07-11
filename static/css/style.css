@@ -1,0 +1,169 @@
+/* Faith Trails custom styling
+   Tailwind (via CDN) handles most utility styling; this file holds the
+   hand-built "adventure map" visual — the signature element of the home page. */
+
+.trail-path {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  column-gap: 0.5rem;
+  row-gap: 3rem;
+  padding: 10px 0 30px 0;
+}
+
+/* The winding path SVG is drawn by trail-path.js, tracing a smooth curve
+   through the center of every marker below it. */
+.trail-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: visible;
+}
+
+#trail-line {
+  fill: none;
+  stroke: #2F5233; /* trailgreen */
+  stroke-opacity: 0.4;
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-dasharray: 1 16;
+}
+
+.trail-node {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: center;
+}
+
+.trail-marker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  text-decoration: none;
+  width: 100%;
+  max-width: 160px;
+}
+
+.trail-marker-circle {
+  position: relative;
+  flex-shrink: 0;
+  width: 5.5rem;
+  height: 5.5rem;
+  border-radius: 9999px;
+  background: #fff;
+  border: 4px solid #D9A73B; /* trailgold */
+  overflow: hidden;
+  box-shadow: 0 3px 0 rgba(58, 46, 32, 0.15);
+  transition: transform 0.15s ease;
+}
+
+.trail-marker-art {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.trail-marker-number {
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 9999px;
+  background: #2F5233;
+  color: #FBF3E3;
+  font-family: "Baloo 2", sans-serif;
+  font-weight: 800;
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #FBF3E3;
+}
+
+.trail-marker:hover .trail-marker-circle {
+  transform: scale(1.06) rotate(-2deg);
+}
+
+.trail-marker-earned {
+  border-color: #2F5233; /* trailgreen */
+}
+
+.trail-marker-locked .trail-marker-circle {
+  opacity: 0.85;
+  filter: grayscale(35%);
+}
+
+.trail-marker-badge {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 9999px;
+  background: #2F5233;
+  color: #FBF3E3;
+  font-size: 0.85rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #FBF3E3;
+}
+
+.trail-marker-badge-lock {
+  background: #8a7a5c;
+  font-size: 0.75rem;
+}
+
+.trail-marker-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  position: relative;
+  z-index: 2;
+  background: #FBF3E3; /* parchment — matches page background, hides the path behind it */
+  padding: 0.3rem 0.5rem;
+  border-radius: 0.75rem;
+}
+
+.trail-marker-circle-link {
+  display: inline-flex;
+  text-decoration: none;
+}
+
+.trail-marker-label a {
+  text-decoration: none;
+}
+
+.reset-badge-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+@media (max-width: 640px) {
+  .trail-path {
+    grid-template-columns: repeat(2, 1fr);
+    row-gap: 2.5rem;
+  }
+}
+
+@media (max-width: 420px) {
+  .trail-path {
+    grid-template-columns: 1fr;
+  }
+}
+
+.coat-stripe {
+  height: 22px;
+  transition: background 0.15s ease;
+}

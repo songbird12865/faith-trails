@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Welcome{% endblock %}
+
+{% block content %}
+
+<div class="bg-white/70 border-4 border-trailgold/40 rounded-3xl shadow-lg p-8 sm:p-12 text-center max-w-md mx-auto">
+  <div class="text-6xl mb-4" aria-hidden="true">🧭</div>
+  <h1 class="font-display text-2xl sm:text-3xl font-800 text-trailgreendark mb-2">Welcome to Faith Trails!</h1>
+  <p class="font-body text-lg text-inkbrown/70 mb-6">Before you start your first quest, what's your name?</p>
+
+  <form id="create-profile-form" class="flex flex-col items-center gap-4">
+    <input
+      id="name-input"
+      type="text"
+      maxlength="30"
+      placeholder="Type your name"
+      class="border-2 border-trailgold rounded-xl px-4 py-3 font-body text-lg text-center w-full max-w-xs"
+      autofocus
+    />
+    <button
+      type="submit"
+      class="bg-trailgreen hover:bg-trailgreendark text-parchment font-display font-700 text-lg px-8 py-3 rounded-full shadow transition-colors"
+    >
+      Let's go! &rarr;
+    </button>
+  </form>
+  <p id="create-feedback" class="text-sm font-700 mt-3 min-h-[1.25rem] text-trailgold"></p>
+</div>
+
+<script>
+  document.getElementById('create-profile-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const input = document.getElementById('name-input');
+    const feedback = document.getElementById('create-feedback');
+    const name = input.value.trim();
+
+    if (!name) {
+      feedback.textContent = 'Please type a name first!';
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        window.location.href = "{{ url_for('home') }}";
+      } else {
+        feedback.textContent = 'Something went wrong — please try again.';
+      }
+    } catch (err) {
+      feedback.textContent = 'Something went wrong — please try again.';
+    }
+  });
+</script>
+
+{% endblock %}

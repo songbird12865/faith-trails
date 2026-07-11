@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}Faith Trails{% endblock %} | A Closer Walk for Kids</title>
+
+<!-- Tailwind via CDN: zero build step, perfect for getting a course project
+     running today. A future version could move to a compiled Tailwind
+     build for production use. -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          parchment: '#FBF3E3',
+          trailgreen: '#2F5233',
+          trailgreendark: '#1E3A22',
+          trailgold: '#D9A73B',
+          trailsky: '#3B7A9C',
+          inkbrown: '#3A2E20',
+        },
+        fontFamily: {
+          display: ['"Baloo 2"', 'sans-serif'],
+          body: ['"Nunito"', 'sans-serif'],
+        },
+      },
+    },
+  };
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="bg-parchment text-inkbrown font-body min-h-screen">
+
+<header class="bg-trailgreen text-parchment shadow-md">
+  <div class="max-w-3xl mx-auto px-5 py-4 flex items-center justify-between">
+    <a href="{{ url_for('home') }}" class="font-display text-2xl font-700 tracking-wide flex items-center gap-2">
+      <span aria-hidden="true">🧭</span> Faith Trails
+    </a>
+    <nav class="flex items-center gap-4">
+      <a href="{{ url_for('badges') }}" class="font-display text-sm sm:text-base font-700 text-parchment/90 hover:text-trailgold transition-colors flex items-center gap-1">
+        <span aria-hidden="true">🏅</span> <span>My Badges</span>
+      </a>
+      <span class="text-xs sm:text-sm text-parchment/80 font-body italic hidden sm:inline">A Closer Walk Kids experience</span>
+    </nav>
+  </div>
+</header>
+
+<main class="max-w-3xl mx-auto px-5 py-8">
+  {% block content %}{% endblock %}
+</main>
+
+<footer class="text-center text-xs text-inkbrown/50 font-body py-8">
+  Faith Trails &middot; A Closer Walk Kids
+</footer>
+
+</body>
+</html>
