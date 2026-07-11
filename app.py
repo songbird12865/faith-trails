@@ -102,7 +102,7 @@ QUEST_CONTENT = {
                 "type": "story",
                 "emoji": "🌈",
                 "text": "When the rain finally stopped, God placed a rainbow in the sky "
-                        "as a promise: He would always keep His people safe.",
+                        "as a promise: He would never destroy the whole Earth by flood again.",
             },
         ],
         "quiz_bank": [
