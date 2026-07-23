@@ -281,6 +281,114 @@ QUEST_CONTENT = {
         ],
         "lesson": "God is with us, even when things feel hard or unfair.",
     },
+    "red-sea": {
+        "title": "Moses and the Red Sea",
+        "story_scenes": [
+            {
+                "type": "story",
+                "emoji": "❤️",
+                "text": "God loved His people very much. He wanted them to be happy "
+                        "and free, not stuck as slaves in Egypt.",
+            },
+            {
+                "type": "story",
+                "emoji": "👴🏼",
+                "text": "So God chose a leader to help set His people free — his name "
+                        "was Moses!",
+            },
+            {
+                "type": "story",
+                "emoji": "😠",
+                "text": "But Pharaoh, the ruler of Egypt, was mean and stubborn. "
+                        "He refused to let God's people go.",
+            },
+            {
+                "type": "story",
+                "emoji": "⚡",
+                "text": "God sent trouble after trouble to Egypt, until Pharaoh finally "
+                        "gave in and let the people leave.",
+            },
+            {
+                "type": "story",
+                "emoji": "🌊",
+                "text": "God's people set out for the land God had promised them. But "
+                        "a huge sea, the Red Sea, blocked their path!",
+            },
+            {
+                "type": "story",
+                "emoji": "🪄",
+                "text": "God told Moses to raise his staff. When he did, God performed "
+                        "an amazing miracle — the sea parted, and dry ground appeared! "
+                        "God's people walked safely across to their new home.",
+            },
+        ],
+        "quiz_bank": [
+            {
+                "type": "quiz",
+                "prompt": "Why did God want His people to be free?",
+                "options": [
+                    "Because He loved them",
+                    "Because Pharaoh asked Him to",
+                    "Because Egypt was too crowded",
+                ],
+                "correct_index": 0,
+            },
+            {
+                "type": "quiz",
+                "prompt": "Who did God choose to lead His people?",
+                "options": [
+                    "Moses",
+                    "Pharaoh",
+                    "Joseph",
+                ],
+                "correct_index": 0,
+            },
+            {
+                "type": "quiz",
+                "prompt": "Why wouldn't Pharaoh let the people go?",
+                "options": [
+                    "He was mean and stubborn",
+                    "He wanted to go with them",
+                    "He didn't have enough food for them",
+                ],
+                "correct_index": 0,
+            },
+            {
+                "type": "quiz",
+                "prompt": "What did Moses do, and what happened next?",
+                "options": [
+                    "He raised his staff, and the sea parted",
+                    "He prayed silently, and it started to rain",
+                    "He clapped his hands, and the sea turned red",
+                ],
+                "correct_index": 0,
+            },
+        ],
+        "quiz_count": 2,
+        "verse_bank": [
+            {
+                "type": "memory_verse",
+                "verse": "Moses answered the people, \"Do not be afraid.\"",
+                "reference": "Exodus 14:13",
+                "reference_options": [
+                    "Exodus 14:13",
+                    "Exodus 4:13",
+                    "Genesis 14:13",
+                ],
+            },
+            {
+                "type": "memory_verse",
+                "verse": "The Lord will fight for you; you only need to be still.",
+                "reference": "Exodus 14:14",
+                "reference_options": [
+                    "Exodus 14:14",
+                    "Exodus 4:14",
+                    "Genesis 14:14",
+                ],
+            },
+        ],
+        "lesson": "When we're afraid, we can be still and trust God to fight for us.",
+    },
 }
 
 
