@@ -15,6 +15,21 @@
     <button type="button" id="cancel-name-btn" class="text-inkbrown/60 font-700 px-2">Cancel</button>
   </form>
   <p id="profile-feedback" class="text-sm font-700 mt-1 min-h-[1.25rem]"></p>
+
+  <p id="difficulty-display" class="font-body text-sm text-inkbrown/70 mt-1">
+    Playing on <span id="difficulty-name" class="font-700 capitalize text-trailsky">{{ profile['current_difficulty'] }}</span>.
+    <button id="edit-difficulty-btn" class="text-sm text-trailsky underline font-body font-600 ml-1">Change difficulty</button>
+  </p>
+  <div id="difficulty-form" class="hidden justify-center items-center gap-2 mt-2">
+    {% for level in difficulties %}
+      <button type="button" class="difficulty-choice-btn border-2 border-trailgold rounded-lg px-3 py-1.5 font-display font-700 capitalize {{ 'bg-trailgreen text-parchment border-trailgreen' if level == profile['current_difficulty'] else 'bg-white' }}"
+              data-difficulty="{{ level }}">
+        {{ level }}
+      </button>
+    {% endfor %}
+    <button type="button" id="cancel-difficulty-btn" class="text-inkbrown/60 font-700 px-2">Cancel</button>
+  </div>
+  <p id="difficulty-feedback" class="text-sm font-700 mt-1 min-h-[1.25rem]"></p>
 </div>
 
 <h1 class="font-display text-3xl sm:text-4xl font-800 text-trailgreendark text-center mb-2">
@@ -113,6 +128,63 @@
       profileFeedback.textContent = 'Could not save right now.';
       profileFeedback.className = 'text-sm font-700 mt-1 min-h-[1.25rem] text-trailgold';
     }
+  });
+
+  // --- UPDATE: change the difficulty level ---
+  const editDifficultyBtn = document.getElementById('edit-difficulty-btn');
+  const cancelDifficultyBtn = document.getElementById('cancel-difficulty-btn');
+  const difficultyForm = document.getElementById('difficulty-form');
+  const difficultyDisplay = document.getElementById('difficulty-display');
+  const difficultyFeedback = document.getElementById('difficulty-feedback');
+  const difficultyNameEl = document.getElementById('difficulty-name');
+  const currentDifficulty = "{{ profile['current_difficulty'] }}";
+
+  editDifficultyBtn.addEventListener('click', () => {
+    difficultyDisplay.classList.add('hidden');
+    difficultyForm.classList.remove('hidden');
+    difficultyForm.classList.add('flex');
+  });
+
+  cancelDifficultyBtn.addEventListener('click', () => {
+    difficultyForm.classList.add('hidden');
+    difficultyForm.classList.remove('flex');
+    difficultyDisplay.classList.remove('hidden');
+  });
+
+  document.querySelectorAll('.difficulty-choice-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const newDifficulty = btn.dataset.difficulty;
+      if (newDifficulty === currentDifficulty) {
+        difficultyForm.classList.add('hidden');
+        difficultyForm.classList.remove('flex');
+        difficultyDisplay.classList.remove('hidden');
+        return;
+      }
+
+      const confirmed = confirm(
+        `Switch to ${newDifficulty} difficulty? Your badges earned on ${currentDifficulty} will still be saved, ` +
+        `but your trail map will show fresh, unearned badges for ${newDifficulty} until you earn them again.`
+      );
+      if (!confirmed) return;
+
+      try {
+        const res = await fetch('/api/profile', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ difficulty: newDifficulty }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          location.reload();
+        } else {
+          difficultyFeedback.textContent = 'Could not save right now.';
+          difficultyFeedback.className = 'text-sm font-700 mt-1 min-h-[1.25rem] text-trailgold';
+        }
+      } catch (err) {
+        difficultyFeedback.textContent = 'Could not save right now.';
+        difficultyFeedback.className = 'text-sm font-700 mt-1 min-h-[1.25rem] text-trailgold';
+      }
+    });
   });
 
   // --- DELETE: reset an earned badge ---

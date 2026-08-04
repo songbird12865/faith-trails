@@ -3,9 +3,14 @@
 
 {% block content %}
 
-<a href="{{ url_for('home') }}" class="inline-flex items-center gap-1 text-trailgreen font-700 mb-6 hover:text-trailsky transition-colors">
-  &larr; Back to Trail Map
-</a>
+<div class="flex items-center justify-between mb-6">
+  <a href="{{ url_for('home') }}" class="inline-flex items-center gap-1 text-trailgreen font-700 hover:text-trailsky transition-colors">
+    &larr; Back to Trail Map
+  </a>
+  <span class="text-xs uppercase tracking-wide font-800 text-trailgold border-2 border-trailgold/50 rounded-full px-3 py-1 capitalize">
+    {{ difficulty }}
+  </span>
+</div>
 
 <div id="quest-card" class="bg-white/70 border-4 border-trailgold/40 rounded-3xl shadow-lg p-6 sm:p-10 min-h-[420px] flex flex-col">
 
@@ -69,6 +74,9 @@
 
     } else if (scene.type === 'interactive' && scene.subtype === 'color_picker') {
       renderColorPickerScene(scene);
+
+    } else if (scene.type === 'interactive' && scene.subtype === 'sequence') {
+      renderSequenceScene(scene);
 
     } else if (scene.type === 'quiz') {
       renderQuizScene(scene);
@@ -190,6 +198,98 @@
     }
 
     draw();
+  }
+
+  function renderSequenceScene(scene) {
+    // Correct order is simply the order the items appear in scene.items.
+    // The tray starts shuffled; the child taps items to add them, in
+    // order, to the assembly line, then we check the final order.
+    let tray = [];
+    let assembled = [];
+
+    function shuffle(arr) {
+      const a = [...arr];
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    function start() {
+      tray = shuffle(scene.items);
+      assembled = [];
+      draw();
+    }
+
+    function draw() {
+      sceneContainer.innerHTML = `
+        <p class="font-display text-xl font-700 text-trailgreendark mb-2">${scene.prompt}</p>
+        <p class="text-sm text-inkbrown/60 mb-4">Tap an event you've already placed to move it back.</p>
+        <div id="sequence-line" class="min-h-[64px] w-full max-w-lg mx-auto bg-trailsky/10 border-4 border-dashed border-trailsky/40 rounded-2xl p-3 mb-6 flex flex-wrap gap-2 justify-center items-center"></div>
+        <div id="sequence-tray" class="flex flex-wrap gap-3 justify-center max-w-lg mx-auto"></div>
+        <p id="sequence-feedback" class="mt-4 font-700 min-h-[1.5rem]"></p>
+      `;
+      sceneControls.innerHTML = '';
+
+      const sequenceLine = document.getElementById('sequence-line');
+      const sequenceTray = document.getElementById('sequence-tray');
+
+      assembled.forEach((item, idx) => {
+        const chip = document.createElement('button');
+        chip.className = 'bg-trailgreen text-parchment font-700 px-3 py-1.5 rounded-lg hover:bg-trailgreendark transition-colors flex items-center gap-1';
+        chip.innerHTML = `<span class="text-xs opacity-75">${idx + 1}.</span> <span aria-hidden="true">${item.emoji}</span> ${item.label}`;
+        chip.title = 'Tap to move back';
+        chip.onclick = () => {
+          assembled = assembled.filter(i => i.id !== item.id);
+          tray.push(item);
+          document.getElementById('sequence-feedback').textContent = '';
+          draw();
+        };
+        sequenceLine.appendChild(chip);
+      });
+
+      tray.forEach(item => {
+        const btn = document.createElement('button');
+        btn.className = 'bg-white border-2 border-trailgold rounded-xl px-3 py-2 flex flex-col items-center shadow hover:scale-105 transition-transform';
+        btn.innerHTML = `<span class="text-2xl" aria-hidden="true">${item.emoji}</span><span class="text-xs font-700 mt-1 max-w-[6rem]">${item.label}</span>`;
+        btn.onclick = () => {
+          assembled.push(item);
+          tray = tray.filter(i => i.id !== item.id);
+          draw();
+          if (tray.length === 0) {
+            checkOrder();
+          }
+        };
+        sequenceTray.appendChild(btn);
+      });
+    }
+
+    function checkOrder() {
+      const feedback = document.getElementById('sequence-feedback');
+      const correct = assembled.every((item, idx) => item.id === scene.items[idx].id);
+      if (correct) {
+        feedback.textContent = 'You got it! \ud83c\udf89';
+        feedback.className = 'mt-4 font-700 min-h-[1.5rem] text-trailgreen';
+        const nextBtn = document.createElement('button');
+        nextBtn.className = 'bg-trailgreen hover:bg-trailgreendark text-parchment font-display font-700 text-lg px-8 py-3 rounded-full shadow transition-colors mt-2';
+        nextBtn.textContent = 'Next \u2192';
+        nextBtn.onclick = () => { current++; renderScene(); };
+        sceneControls.innerHTML = '';
+        sceneControls.appendChild(nextBtn);
+      } else {
+        feedback.textContent = 'Not quite \u2014 fix the order above, or start over!';
+        feedback.className = 'mt-4 font-700 min-h-[1.5rem] text-trailgold';
+        const retryBtn = document.createElement('button');
+        retryBtn.className = 'bg-trailgold hover:bg-trailgold/80 text-inkbrown font-display font-700 px-6 py-2 rounded-full shadow mt-2';
+        retryBtn.textContent = 'Start Over';
+        retryBtn.onclick = start;
+        sceneControls.innerHTML = '';
+        sceneControls.appendChild(retryBtn);
+      }
+    }
+
+    start();
   }
 
   function renderQuizScene(scene) {

@@ -7,7 +7,11 @@ DROP TABLE IF EXISTS users;
 
 CREATE TABLE users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL
+    name TEXT NOT NULL,
+    -- Chosen once by the child when they set up their profile ("log in").
+    -- Applies to every quest until they deliberately change it. NULL means
+    -- they haven't picked a difficulty yet (shown the picker on first visit).
+    current_difficulty TEXT CHECK (current_difficulty IN ('easy', 'medium', 'hard'))
 );
 
 CREATE TABLE quests (
@@ -24,17 +28,24 @@ CREATE TABLE badges_earned (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
     quest_id INTEGER NOT NULL,
+    -- A badge is tied to the difficulty it was earned at. This is what
+    -- makes switching difficulty feel like "starting over": a medium
+    -- badge doesn't count as a hard badge, so the trail map shows a
+    -- fresh, unearned set when the child switches levels. Nothing is
+    -- ever deleted -- old badges are still in the table -- but only the
+    -- badges matching the profile's current_difficulty are shown.
+    difficulty TEXT NOT NULL CHECK (difficulty IN ('easy', 'medium', 'hard')),
     earned_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id),
     FOREIGN KEY (quest_id) REFERENCES quests(id),
-    UNIQUE(user_id, quest_id)
+    UNIQUE(user_id, quest_id, difficulty)
 );
 
--- Seed data: one demo child profile (name left blank until the player
--- creates it on first visit), and the trail's story quests.
+-- Seed data: one demo child profile (name and difficulty left blank until
+-- the player sets them up on first visit), and the trail's story quests.
 -- Order matches the zigzag map layout: 1-3 across the top row,
 -- 4-6 across the bottom row, read left to right on each row.
-INSERT INTO users (id, name) VALUES (1, '');
+INSERT INTO users (id, name, current_difficulty) VALUES (1, '', NULL);
 
 INSERT INTO quests (slug, title, summary, icon, sort_order, is_available) VALUES
     ('noahs-ark', 'Noah''s Ark', 'Help gather the animals two by two!', '🐘', 1, 1),

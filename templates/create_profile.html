@@ -8,7 +8,7 @@
   <h1 class="font-display text-2xl sm:text-3xl font-800 text-trailgreendark mb-2">Welcome to Faith Trails!</h1>
   <p class="font-body text-lg text-inkbrown/70 mb-6">Before you start your first quest, what's your name?</p>
 
-  <form id="create-profile-form" class="flex flex-col items-center gap-4">
+  <form id="create-profile-form" class="flex flex-col items-center gap-6">
     <input
       id="name-input"
       type="text"
@@ -17,6 +17,23 @@
       class="border-2 border-trailgold rounded-xl px-4 py-3 font-body text-lg text-center w-full max-w-xs"
       autofocus
     />
+
+    <div class="w-full">
+      <p class="font-display font-700 text-trailgreendark mb-3">How tricky should your quests be?</p>
+      <div id="difficulty-picker" class="flex flex-col sm:flex-row gap-3 justify-center">
+        {% for level in difficulties %}
+          <button
+            type="button"
+            class="difficulty-option border-2 border-trailgold rounded-xl px-4 py-3 font-display font-700 capitalize flex-1 transition-colors"
+            data-difficulty="{{ level }}"
+          >
+            {{ level }}
+          </button>
+        {% endfor %}
+      </div>
+      <p class="text-xs text-inkbrown/60 mt-2">You can change this later, but switching levels starts your badges over.</p>
+    </div>
+
     <button
       type="submit"
       class="bg-trailgreen hover:bg-trailgreendark text-parchment font-display font-700 text-lg px-8 py-3 rounded-full shadow transition-colors"
@@ -28,6 +45,21 @@
 </div>
 
 <script>
+  let selectedDifficulty = null;
+  const difficultyButtons = document.querySelectorAll('.difficulty-option');
+
+  difficultyButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      selectedDifficulty = btn.dataset.difficulty;
+      difficultyButtons.forEach(b => {
+        b.classList.remove('bg-trailgreen', 'text-parchment', 'border-trailgreen');
+        b.classList.add('bg-white');
+      });
+      btn.classList.remove('bg-white');
+      btn.classList.add('bg-trailgreen', 'text-parchment', 'border-trailgreen');
+    });
+  });
+
   document.getElementById('create-profile-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const input = document.getElementById('name-input');
@@ -38,12 +70,16 @@
       feedback.textContent = 'Please type a name first!';
       return;
     }
+    if (!selectedDifficulty) {
+      feedback.textContent = 'Please pick a difficulty level first!';
+      return;
+    }
 
     try {
       const res = await fetch('/api/profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({ name, difficulty: selectedDifficulty }),
       });
       const data = await res.json();
       if (data.success) {

@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Hall of Fame{% endblock %}
+
+{% block content %}
+
+<a href="{{ url_for('home') }}" class="inline-flex items-center gap-1 text-trailgreen font-700 mb-6 hover:text-trailsky transition-colors">
+  &larr; Back to Trail Map
+</a>
+
+<h1 class="font-display text-3xl sm:text-4xl font-800 text-trailgreendark text-center mb-2">
+  {{ profile['name'] }}'s Hall of Fame
+</h1>
+<p class="text-center text-inkbrown/70 mb-8 font-600">
+  Every badge you've earned, at every difficulty &mdash; not just your current level.
+</p>
+
+<!-- Legend -->
+<div class="flex justify-center gap-6 mb-8 flex-wrap">
+  <span class="flex items-center gap-2 text-sm font-700 text-inkbrown/80">
+    <span class="hof-halo-dot" style="box-shadow: 0 0 0 3px #B08D57;"></span> Easy
+  </span>
+  <span class="flex items-center gap-2 text-sm font-700 text-inkbrown/80">
+    <span class="hof-halo-dot" style="box-shadow: 0 0 0 3px #B7C0C7;"></span> Medium
+  </span>
+  <span class="flex items-center gap-2 text-sm font-700 text-inkbrown/80">
+    <span class="hof-halo-dot" style="box-shadow: 0 0 0 3px #E8C24A;"></span> Hard
+  </span>
+</div>
+
+<div class="overflow-x-auto">
+  <table class="w-full max-w-2xl mx-auto border-separate" style="border-spacing: 0.75rem;">
+    <thead>
+      <tr>
+        <th class="text-left font-display text-sm text-inkbrown/60 font-700 uppercase tracking-wide pb-2">Quest</th>
+        {% for level in difficulties %}
+          <th class="font-display text-sm text-trailgreendark font-800 uppercase tracking-wide capitalize pb-2">{{ level }}</th>
+        {% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for q in quests %}
+        <tr>
+          <td class="text-left align-middle">
+            <span class="font-display font-700 text-trailgreendark text-sm sm:text-base">{{ q['title'] }}</span>
+            {% if not q['is_available'] %}
+              <span class="block text-xs uppercase tracking-wide text-trailgold font-800">Coming soon</span>
+            {% endif %}
+          </td>
+          {% for level in difficulties %}
+            {% set earned_at = earned.get((q['id'], level)) %}
+            <td class="text-center align-middle">
+              {% if earned_at %}
+                {% if level == 'easy' %}
+                  {% set halo = '#B08D57' %}
+                {% elif level == 'medium' %}
+                  {% set halo = '#B7C0C7' %}
+                {% else %}
+                  {% set halo = '#E8C24A' %}
+                {% endif %}
+                <span class="trail-marker-circle trail-marker-earned inline-flex"
+                      style="width:3.5rem; height:3.5rem; box-shadow: 0 0 0 4px {{ halo }};"
+                      title="Earned {{ earned_at[:10] }} on {{ level|capitalize }}">
+                  <img src="{{ url_for('static', filename='img/quests/' ~ q['slug'] ~ '.jpg') }}"
+                       alt="" class="trail-marker-art" aria-hidden="true">
+                  <span class="trail-marker-badge" title="Badge earned!">✓</span>
+                </span>
+              {% elif not q['is_available'] %}
+                <span class="inline-flex items-center justify-center rounded-full border-2 border-dashed border-inkbrown/20"
+                      style="width:3.5rem; height:3.5rem;">
+                  <span class="text-inkbrown/30 text-xl" aria-hidden="true">🔒</span>
+                </span>
+              {% else %}
+                <span class="inline-flex items-center justify-center rounded-full border-2 border-dashed border-inkbrown/20"
+                      style="width:3.5rem; height:3.5rem;">
+                  <span class="text-inkbrown/25 text-xs">&mdash;</span>
+                </span>
+              {% endif %}
+            </td>
+          {% endfor %}
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<style>
+  .hof-halo-dot {
+    display: inline-block;
+    width: 0.85rem;
+    height: 0.85rem;
+    border-radius: 9999px;
+    background: #FBF3E3;
+  }
+</style>
+
+{% endblock %}
