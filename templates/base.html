@@ -47,6 +47,14 @@
       <a href="{{ url_for('hall_of_fame') }}" class="font-display text-sm sm:text-base font-700 text-parchment/90 hover:text-trailgold transition-colors flex items-center gap-1">
         <span aria-hidden="true">🏆</span> <span>Hall of Fame</span>
       </a>
+      {% if profile %}
+      <span class="text-xs sm:text-sm text-parchment/80 font-body hidden sm:inline">
+        Playing as <span class="font-700 text-trailgold">{{ profile['name'] }}</span>
+      </span>
+      <a href="{{ url_for('logout') }}" class="font-display text-sm sm:text-base font-700 text-parchment/90 hover:text-trailgold transition-colors flex items-center gap-1">
+        <span aria-hidden="true">🔄</span> <span>Switch Player</span>
+      </a>
+      {% endif %}
       <span class="text-xs sm:text-sm text-parchment/80 font-body italic hidden sm:inline">A Closer Walk Kids experience</span>
     </nav>
   </div>

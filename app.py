@@ -850,6 +850,7 @@ def quest(slug):
         scenes_json=json.dumps(scenes),
         lesson=content["lesson"],
         difficulty=difficulty,
+        profile=profile,
     )
 
 

@@ -7,7 +7,9 @@ DROP TABLE IF EXISTS users;
 
 CREATE TABLE users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
+    -- UNIQUE + COLLATE NOCASE: every player needs a distinct name (case-
+    -- insensitive) so the "Who's Playing?" picker can tell them apart.
+    name TEXT NOT NULL UNIQUE COLLATE NOCASE,
     -- Chosen once by the child when they set up their profile ("log in").
     -- Applies to every quest until they deliberately change it. NULL means
     -- they haven't picked a difficulty yet (shown the picker on first visit).
@@ -41,11 +43,12 @@ CREATE TABLE badges_earned (
     UNIQUE(user_id, quest_id, difficulty)
 );
 
--- Seed data: one demo child profile (name and difficulty left blank until
--- the player sets them up on first visit), and the trail's story quests.
+-- Seed data: just the trail's story quests. Player profiles are no
+-- longer pre-seeded -- each player creates their own via the "New
+-- Player" screen (/players/new), which is what makes the "Who's
+-- Playing?" picker meaningful once more than one profile exists.
 -- Order matches the zigzag map layout: 1-3 across the top row,
 -- 4-6 across the bottom row, read left to right on each row.
-INSERT INTO users (id, name, current_difficulty) VALUES (1, '', NULL);
 
 INSERT INTO quests (slug, title, summary, icon, sort_order, is_available) VALUES
     ('noahs-ark', 'Noah''s Ark', 'Help gather the animals two by two!', '🐘', 1, 1),
