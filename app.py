@@ -8,13 +8,21 @@ Then open: http://127.0.0.1:5000
 import sqlite3
 import json
 import random
-from flask import Flask, render_template, g, jsonify, abort, request
+import secrets
+from flask import (
+    Flask, render_template, g, jsonify, abort, request,
+    session, redirect, url_for,
+)
 
 DB_PATH = "faith_trails.db"
-DEMO_USER_ID = 1  # single local profile for the MVP; multi-profile support is a future step
 DIFFICULTIES = ("easy", "medium", "hard")
 
 app = Flask(__name__)
+# Needed for Flask's session cookie (tracks which player is logged in).
+# In production, set this from an environment variable instead of
+# regenerating it on every restart -- otherwise everyone gets logged out
+# each time the server reloads. For the class demo this is fine as-is.
+app.secret_key = secrets.token_hex(16)
 
 # ---------------------------------------------------------------------------
 # Database helpers
@@ -649,9 +657,15 @@ QUEST_CONTENT = {
 # Helpers
 # ---------------------------------------------------------------------------
 
-def get_profile(db):
+def get_current_user(db):
+    """Returns the users row for whoever is logged in this session, or
+    None if nobody's picked a profile yet (session has no user_id, or
+    that user_id no longer exists)."""
+    user_id = session.get("user_id")
+    if user_id is None:
+        return None
     return db.execute(
-        "SELECT * FROM users WHERE id = ?", (DEMO_USER_ID,)
+        "SELECT * FROM users WHERE id = ?", (user_id,)
     ).fetchone()
 
 
@@ -678,16 +692,57 @@ def build_scenes(content, difficulty):
 # Routes
 # ---------------------------------------------------------------------------
 
+@app.route("/players")
+def players():
+    """Who's Playing? Lists every existing profile so a returning player
+    can tap their name and pick up where they left off, plus a
+    'New Player' tile that leads to create_profile.html."""
+    db = get_db()
+    all_players = db.execute(
+        "SELECT * FROM users ORDER BY name COLLATE NOCASE"
+    ).fetchall()
+    return render_template("players.html", players=all_players)
+
+
+@app.route("/players/<int:user_id>/select")
+def select_player(user_id):
+    """Logs the chosen player in by storing their id in the session,
+    then sends them to the trail map."""
+    db = get_db()
+    user = db.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+    if user is None:
+        abort(404)
+    session["user_id"] = user_id
+    return redirect(url_for("home"))
+
+
+@app.route("/players/new")
+def new_player():
+    """Onboarding screen for a brand-new player: choose a name and a
+    starting difficulty. Submits to POST /api/profile, which creates
+    the user row and logs them in."""
+    return render_template("create_profile.html", difficulties=DIFFICULTIES)
+
+
+@app.route("/logout")
+def logout():
+    """Clears who's logged in for this browser session. Doesn't touch
+    any data -- the player's name, difficulty, and badges are all still
+    in the database, waiting for them (or anyone) to log back in."""
+    session.pop("user_id", None)
+    return redirect(url_for("players"))
+
+
 @app.route("/")
 def home():
     """Trail map: shows every quest and which ones are already completed
-    at the player's current difficulty. If the player hasn't created a
-    profile (name + difficulty) yet, show the onboarding screen instead."""
+    at the logged-in player's current difficulty. If nobody's logged in
+    yet, send them to the player picker instead."""
     db = get_db()
-    profile = get_profile(db)
+    profile = get_current_user(db)
 
-    if not profile["name"] or not profile["current_difficulty"]:
-        return render_template("create_profile.html", difficulties=DIFFICULTIES)
+    if profile is None:
+        return redirect(url_for("players"))
 
     quests = db.execute(
         "SELECT * FROM quests ORDER BY sort_order"
@@ -696,7 +751,7 @@ def home():
         row["quest_id"]
         for row in db.execute(
             "SELECT quest_id FROM badges_earned WHERE user_id = ? AND difficulty = ?",
-            (DEMO_USER_ID, profile["current_difficulty"]),
+            (profile["id"], profile["current_difficulty"]),
         ).fetchall()
     }
     return render_template(
@@ -713,10 +768,10 @@ def badges():
     """Badge case: shows every badge the player has earned so far at
     their current difficulty, plus the ones still waiting to be earned."""
     db = get_db()
-    profile = get_profile(db)
+    profile = get_current_user(db)
 
-    if not profile["name"] or not profile["current_difficulty"]:
-        return render_template("create_profile.html", difficulties=DIFFICULTIES)
+    if profile is None:
+        return redirect(url_for("players"))
 
     quests = db.execute(
         "SELECT * FROM quests WHERE is_available = 1 ORDER BY sort_order"
@@ -725,7 +780,7 @@ def badges():
         row["quest_id"]: row["earned_at"]
         for row in db.execute(
             "SELECT quest_id, earned_at FROM badges_earned WHERE user_id = ? AND difficulty = ?",
-            (DEMO_USER_ID, profile["current_difficulty"]),
+            (profile["id"], profile["current_difficulty"]),
         ).fetchall()
     }
     return render_template("badges.html", quests=quests, earned=earned, profile=profile)
@@ -740,17 +795,17 @@ def hall_of_fame():
     parent) who wants to see everything they've ever earned in one
     place, not just their current level."""
     db = get_db()
-    profile = get_profile(db)
+    profile = get_current_user(db)
 
-    if not profile["name"] or not profile["current_difficulty"]:
-        return render_template("create_profile.html", difficulties=DIFFICULTIES)
+    if profile is None:
+        return redirect(url_for("players"))
 
     quests = db.execute(
         "SELECT * FROM quests ORDER BY sort_order"
     ).fetchall()
     earned_rows = db.execute(
         "SELECT quest_id, difficulty, earned_at FROM badges_earned WHERE user_id = ?",
-        (DEMO_USER_ID,),
+        (profile["id"],),
     ).fetchall()
     # Map of (quest_id, difficulty) -> earned_at, for quick lookup per cell.
     earned = {(row["quest_id"], row["difficulty"]): row["earned_at"] for row in earned_rows}
@@ -767,10 +822,10 @@ def hall_of_fame():
 @app.route("/quest/<slug>")
 def quest(slug):
     db = get_db()
-    profile = get_profile(db)
+    profile = get_current_user(db)
 
-    if not profile["name"] or not profile["current_difficulty"]:
-        return render_template("create_profile.html", difficulties=DIFFICULTIES)
+    if profile is None:
+        return redirect(url_for("players"))
 
     quest_row = db.execute(
         "SELECT * FROM quests WHERE slug = ?", (slug,)
@@ -804,7 +859,10 @@ def complete_quest(slug):
     in a quest. Records a new badge for that quest, tied to the profile's
     current difficulty."""
     db = get_db()
-    profile = get_profile(db)
+    profile = get_current_user(db)
+    if profile is None:
+        return jsonify({"error": "No player logged in"}), 401
+
     quest_row = db.execute(
         "SELECT * FROM quests WHERE slug = ?", (slug,)
     ).fetchone()
@@ -817,7 +875,7 @@ def complete_quest(slug):
 
     db.execute(
         "INSERT OR IGNORE INTO badges_earned (user_id, quest_id, difficulty) VALUES (?, ?, ?)",
-        (DEMO_USER_ID, quest_row["id"], profile["current_difficulty"]),
+        (profile["id"], quest_row["id"], profile["current_difficulty"]),
     )
     db.commit()
 
@@ -832,15 +890,15 @@ def api_quests():
     browser) and for any future screen that needs quest data without a
     full page reload."""
     db = get_db()
-    profile = get_profile(db)
+    profile = get_current_user(db)
     quests = db.execute("SELECT * FROM quests ORDER BY sort_order").fetchall()
     earned = set()
-    if profile["current_difficulty"]:
+    if profile is not None and profile["current_difficulty"]:
         earned = {
             row["quest_id"]
             for row in db.execute(
                 "SELECT quest_id FROM badges_earned WHERE user_id = ? AND difficulty = ?",
-                (DEMO_USER_ID, profile["current_difficulty"]),
+                (profile["id"], profile["current_difficulty"]),
             ).fetchall()
         }
 
@@ -859,9 +917,11 @@ def api_quests():
 
 @app.route("/api/profile", methods=["POST"])
 def create_profile():
-    """CREATE: sets the player's name and starting difficulty for the
-    first time, during onboarding. (Separate from the PUT endpoint
-    below, which handles later renames/difficulty changes.)"""
+    """CREATE: registers a brand-new player (name + starting difficulty)
+    and logs them in for this session. Player names must be unique
+    (case-insensitive) so the picker on /players can tell everyone
+    apart. (Separate from the PUT endpoint below, which handles
+    renames/difficulty changes for whoever's currently logged in.)"""
     data = request.get_json(silent=True) or {}
     new_name = (data.get("name") or "").strip()
     difficulty = (data.get("difficulty") or "").strip().lower()
@@ -872,20 +932,30 @@ def create_profile():
         return jsonify({"error": "A 'difficulty' of easy, medium, or hard is required"}), 400
 
     db = get_db()
-    db.execute(
-        "UPDATE users SET name = ?, current_difficulty = ? WHERE id = ?",
-        (new_name, difficulty, DEMO_USER_ID),
+    existing = db.execute(
+        "SELECT id FROM users WHERE name = ? COLLATE NOCASE", (new_name,)
+    ).fetchone()
+    if existing is not None:
+        return jsonify({"error": "That name is already taken -- pick a different one"}), 409
+
+    cursor = db.execute(
+        "INSERT INTO users (name, current_difficulty) VALUES (?, ?)",
+        (new_name, difficulty),
     )
     db.commit()
+    new_id = cursor.lastrowid
+    session["user_id"] = new_id
 
-    return jsonify({"success": True, "id": DEMO_USER_ID, "name": new_name, "difficulty": difficulty}), 201
+    return jsonify({"success": True, "id": new_id, "name": new_name, "difficulty": difficulty}), 201
 
 
 @app.route("/api/profile", methods=["GET"])
 def get_profile_route():
-    """READ: returns the demo user's current profile name and difficulty."""
+    """READ: returns the logged-in player's profile name and difficulty."""
     db = get_db()
-    user = get_profile(db)
+    user = get_current_user(db)
+    if user is None:
+        return jsonify({"error": "No player logged in"}), 401
     return jsonify({"id": user["id"], "name": user["name"], "difficulty": user["current_difficulty"]})
 
 
@@ -900,7 +970,9 @@ def update_profile():
     progress was reset."""
     data = request.get_json(silent=True) or {}
     db = get_db()
-    profile = get_profile(db)
+    profile = get_current_user(db)
+    if profile is None:
+        return jsonify({"error": "No player logged in"}), 401
 
     new_name = (data.get("name") or "").strip() if "name" in data else profile["name"]
     new_difficulty = profile["current_difficulty"]
@@ -913,13 +985,21 @@ def update_profile():
     if not new_name:
         return jsonify({"error": "A non-empty 'name' is required"}), 400
 
+    if new_name.lower() != profile["name"].lower():
+        clash = db.execute(
+            "SELECT id FROM users WHERE name = ? COLLATE NOCASE AND id != ?",
+            (new_name, profile["id"]),
+        ).fetchone()
+        if clash is not None:
+            return jsonify({"error": "That name is already taken -- pick a different one"}), 409
+
     db.execute(
         "UPDATE users SET name = ?, current_difficulty = ? WHERE id = ?",
-        (new_name, new_difficulty, DEMO_USER_ID),
+        (new_name, new_difficulty, profile["id"]),
     )
     db.commit()
 
-    return jsonify({"success": True, "id": DEMO_USER_ID, "name": new_name, "difficulty": new_difficulty})
+    return jsonify({"success": True, "id": profile["id"], "name": new_name, "difficulty": new_difficulty})
 
 
 @app.route("/api/reset/<slug>", methods=["DELETE"])
@@ -928,7 +1008,10 @@ def reset_badge(slug):
     current difficulty, so the demo user can replay it. Also useful
     during development/testing."""
     db = get_db()
-    profile = get_profile(db)
+    profile = get_current_user(db)
+    if profile is None:
+        return jsonify({"error": "No player logged in"}), 401
+
     quest_row = db.execute(
         "SELECT * FROM quests WHERE slug = ?", (slug,)
     ).fetchone()
@@ -938,7 +1021,7 @@ def reset_badge(slug):
 
     cursor = db.execute(
         "DELETE FROM badges_earned WHERE user_id = ? AND quest_id = ? AND difficulty = ?",
-        (DEMO_USER_ID, quest_row["id"], profile["current_difficulty"]),
+        (profile["id"], quest_row["id"], profile["current_difficulty"]),
     )
     db.commit()
 

@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Who's Playing? — Faith Trails{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 py-10 text-center">
+  <h1 class="text-3xl font-bold text-slate-800 mb-8">Who's Playing?</h1>
+
+  <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-8">
+    {% for player in players %}
+    <a href="{{ url_for('select_player', user_id=player['id']) }}"
+       class="flex flex-col items-center justify-center gap-2 rounded-2xl bg-white shadow
+              hover:shadow-lg hover:-translate-y-1 transition p-6 border-2 border-transparent
+              hover:border-amber-400">
+      <span class="text-4xl">🧑‍🚀</span>
+      <span class="font-semibold text-slate-700">{{ player['name'] }}</span>
+      <span class="text-xs uppercase tracking-wide text-slate-400">
+        {{ player['current_difficulty'] or 'new' }}
+      </span>
+    </a>
+    {% endfor %}
+
+    <a href="{{ url_for('new_player') }}"
+       class="flex flex-col items-center justify-center gap-2 rounded-2xl bg-amber-50
+              border-2 border-dashed border-amber-300 hover:bg-amber-100 transition p-6">
+      <span class="text-4xl">➕</span>
+      <span class="font-semibold text-amber-700">New Player</span>
+    </a>
+  </div>
+
+  {% if not players %}
+  <p class="text-slate-500">No players yet — tap "New Player" to get started!</p>
+  {% endif %}
+</div>
+{% endblock %}
