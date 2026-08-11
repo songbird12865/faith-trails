@@ -13,6 +13,7 @@ from flask import (
     Flask, render_template, g, jsonify, abort, request,
     session, redirect, url_for,
 )
+from narration_utils import build_narration_index
 
 DB_PATH = "faith_trails.db"
 DIFFICULTIES = ("easy", "medium", "hard")
@@ -652,6 +653,13 @@ QUEST_CONTENT = {
     },
 }
 
+# Attaches a "narration_file" field to every scene/question/verse dict
+# above (and a "lesson_narration_file" to each quest), and returns the
+# flat list generate_narration.py uses to actually call ElevenLabs. Run
+# once here, at import time, so every request already has the filenames
+# baked in with zero extra per-request work.
+NARRATION_INDEX = build_narration_index(QUEST_CONTENT)
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -849,6 +857,7 @@ def quest(slug):
         quest=quest_row,
         scenes_json=json.dumps(scenes),
         lesson=content["lesson"],
+        lesson_narration_file=content.get("lesson_narration_file"),
         difficulty=difficulty,
         profile=profile,
     )

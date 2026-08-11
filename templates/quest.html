@@ -17,6 +17,16 @@
   <!-- Progress dots -->
   <div id="progress-dots" class="flex justify-center gap-2 mb-6"></div>
 
+  <!-- Narration control: shown/hidden per scene by playNarrationFor() below -->
+  <div id="narration-control" class="flex justify-center mb-4 hidden">
+    <button id="narration-btn" type="button"
+      class="inline-flex items-center gap-2 bg-trailsky/10 hover:bg-trailsky/20 text-trailsky font-display font-700 text-sm px-4 py-2 rounded-full border-2 border-trailsky/40 transition-colors">
+      <span id="narration-btn-icon" aria-hidden="true">🔊</span>
+      <span id="narration-btn-label">Read to me</span>
+    </button>
+  </div>
+  <audio id="narration-audio" preload="none"></audio>
+
   <div id="scene-container" class="flex-1 flex flex-col items-center justify-center text-center"></div>
 
   <div id="scene-controls" class="mt-8 flex justify-center"></div>
@@ -28,6 +38,7 @@
   const questLesson = {{ lesson | tojson }};
   const questSlug = {{ quest['slug'] | tojson }};
   const questIcon = {{ quest['icon'] | tojson }};
+  const lessonNarrationFile = {{ lesson_narration_file | tojson }};
 
   let current = 0;
   let placedCount = 0;
@@ -35,6 +46,65 @@
   const sceneContainer = document.getElementById('scene-container');
   const sceneControls = document.getElementById('scene-controls');
   const progressDots = document.getElementById('progress-dots');
+
+  // ---- Narration -----------------------------------------------------
+  // Every scene coming from the server already has a "narration_file"
+  // field baked in (see narration_utils.py), pointing to the matching
+  // pre-generated ElevenLabs .mp3 in static/audio/quests/. This section
+  // just plays whichever one belongs to the scene currently on screen.
+
+  const narrationControl = document.getElementById('narration-control');
+  const narrationBtn = document.getElementById('narration-btn');
+  const narrationLabel = document.getElementById('narration-btn-label');
+  const narrationAudio = document.getElementById('narration-audio');
+  let narrationPlaying = false;
+
+  function resetNarrationButton() {
+    narrationPlaying = false;
+    narrationLabel.textContent = 'Read to me';
+  }
+
+  function stopNarration() {
+    narrationAudio.pause();
+    narrationAudio.currentTime = 0;
+    resetNarrationButton();
+    if (window.FaithTrailsAudio) {
+      const gp = document.getElementById('gameplay-music');
+      if (gp) gp.volume = 0.4;
+    }
+  }
+
+  function showNarrationFor(filename) {
+    stopNarration();
+    if (!filename) {
+      narrationControl.classList.add('hidden');
+      return;
+    }
+    narrationAudio.src = `/static/audio/quests/${filename}`;
+    narrationControl.classList.remove('hidden');
+  }
+
+  narrationBtn.addEventListener('click', () => {
+    if (narrationPlaying) {
+      stopNarration();
+      return;
+    }
+    if (window.FaithTrailsAudio) {
+      const gp = document.getElementById('gameplay-music');
+      if (gp) gp.volume = 0.12;
+    }
+    narrationAudio.play().catch(() => {});
+    narrationPlaying = true;
+    narrationLabel.textContent = 'Stop';
+  });
+
+  narrationAudio.addEventListener('ended', () => {
+    resetNarrationButton();
+    if (window.FaithTrailsAudio) {
+      const gp = document.getElementById('gameplay-music');
+      if (gp) gp.volume = 0.4;
+    }
+  });
 
   function renderDots() {
     progressDots.innerHTML = '';
@@ -59,6 +129,7 @@
     const scene = scenes[current];
 
     if (scene.type === 'story') {
+      showNarrationFor(scene.narration_file);
       sceneContainer.innerHTML = `
         <div class="text-6xl sm:text-7xl mb-6" aria-hidden="true">${scene.emoji}</div>
         <p class="font-body text-lg sm:text-xl leading-relaxed max-w-md">${scene.text}</p>
@@ -70,18 +141,25 @@
       sceneControls.appendChild(nextBtn);
 
     } else if (scene.type === 'interactive' && scene.subtype === 'matching') {
+      showNarrationFor(scene.narration_file);
       renderMatchingScene(scene);
 
     } else if (scene.type === 'interactive' && scene.subtype === 'color_picker') {
+      showNarrationFor(scene.narration_file);
       renderColorPickerScene(scene);
 
     } else if (scene.type === 'interactive' && scene.subtype === 'sequence') {
+      showNarrationFor(scene.narration_file);
       renderSequenceScene(scene);
 
     } else if (scene.type === 'quiz') {
+      showNarrationFor(scene.narration_file);
       renderQuizScene(scene);
 
     } else if (scene.type === 'memory_verse') {
+      // Memory verse narration is shown inside showLearn() below, since
+      // that's the step where the verse text is actually on screen --
+      // the later build/reference steps are hands-on activities.
       renderMemoryVerseScene(scene);
     }
   }
@@ -337,6 +415,7 @@
     }
 
     function showLearn() {
+      showNarrationFor(scene.narration_file);
       sceneContainer.innerHTML = `
         <div class="text-5xl mb-4" aria-hidden="true">📖</div>
         <p class="font-display text-2xl font-800 text-trailgreendark mb-4">Let's learn a memory verse!</p>
@@ -362,6 +441,7 @@
     }
 
     function drawBuild() {
+      showNarrationFor(null);
       sceneContainer.innerHTML = `
         <p class="font-display text-xl font-700 text-trailgreendark mb-2">Tap the words in the right order!</p>
         <p class="text-sm text-inkbrown/60 mb-4">Tap a word you've already placed to move it back.</p>
@@ -458,6 +538,7 @@
   }
 
   function renderBadgeScene() {
+    showNarrationFor(lessonNarrationFile);
     sceneContainer.innerHTML = `
       <div class="text-7xl mb-4 animate-bounce" aria-hidden="true">${questIcon}</div>
       <h2 class="font-display text-2xl font-800 text-trailgreendark mb-3">Badge earned!</h2>
