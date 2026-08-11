@@ -92,4 +92,23 @@ window.FaithTrailsAudio = (function () {
 
 document.addEventListener('DOMContentLoaded', function () {
   window.FaithTrailsAudio.resumeGameplayIfStarted();
+
+  // Fallback: some browsers block audio.play() when it's triggered
+  // automatically on page load (not tied to a direct click), even if
+  // music was already started earlier in this session. If that happens,
+  // the gameplay track will be paused even though it should be playing.
+  // This listener catches the very next click anywhere on the page and
+  // uses it to resume the music, since a real click always satisfies
+  // the browser's autoplay permission requirement.
+  document.addEventListener('click', function resumeOnFirstClick() {
+    const gp = document.getElementById('gameplay-music');
+    const startedFlag = sessionStorage.getItem('ft_music_started') === '1';
+    const celebrationOpen = document.getElementById('badge-overlay')
+      && document.getElementById('badge-overlay').classList.contains('is-open');
+
+    if (gp && startedFlag && gp.paused && !celebrationOpen) {
+      gp.play().catch(() => {});
+    }
+    document.removeEventListener('click', resumeOnFirstClick);
+  }, { once: true });
 });
