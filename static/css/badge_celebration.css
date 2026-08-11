@@ -44,27 +44,30 @@
   border: 4px solid transparent;
 }
 
-.badge-circle--bronze {
+.badge-circle--easy {
   background: #f3ddc9;
   border-color: #b3651c;
 }
-.badge-circle--bronze .badge-star {
+.badge-circle--easy .badge-star,
+.badge-circle--easy #badge-circle-emoji {
   color: #7a3f0f;
 }
 
-.badge-circle--silver {
+.badge-circle--medium {
   background: #eceff1;
   border-color: #9aa3ab;
 }
-.badge-circle--silver .badge-star {
+.badge-circle--medium .badge-star,
+.badge-circle--medium #badge-circle-emoji {
   color: #4a545c;
 }
 
-.badge-circle--gold {
+.badge-circle--hard {
   background: #faeeda;
   border-color: #ef9f27;
 }
-.badge-circle--gold .badge-star {
+.badge-circle--hard .badge-star,
+.badge-circle--hard #badge-circle-emoji {
   color: #854f0b;
 }
 
