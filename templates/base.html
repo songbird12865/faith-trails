@@ -35,6 +35,10 @@
 </head>
 <body class="bg-parchment text-inkbrown font-body min-h-screen">
 
+<audio id="gameplay-music" loop preload="auto">
+  <source src="{{ url_for('static', filename='music/gameplay_theme.mp3') }}" type="audio/mpeg">
+</audio>
+
 <header class="bg-trailgreen text-parchment shadow-md">
   <div class="max-w-3xl mx-auto px-4 sm:px-5 py-3 sm:py-4 flex flex-wrap items-center justify-center sm:justify-between gap-x-4 gap-y-2">
     <a href="{{ url_for('home') }}" class="font-display text-xl sm:text-2xl font-700 tracking-wide flex items-center gap-2">
@@ -67,6 +71,8 @@
 <footer class="text-center text-xs text-inkbrown/50 font-body py-8">
   Faith Trails &middot; A Closer Walk Kids
 </footer>
+
+<script src="{{ url_for('static', filename='js/background_music.js') }}"></script>
 
 </body>
 </html>

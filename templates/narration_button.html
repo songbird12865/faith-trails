@@ -1,0 +1,62 @@
+<!--
+  narration_button.html
+
+  A "read to me" play button for quest story text. Include this near
+  whatever block displays the story/quiz text.
+
+  Pass these variables from your Flask route:
+    narration_key  -> the "key" used in generate_narration.py, e.g. "noahs_ark_story"
+    narration_hash -> the text hash suffix on the generated filename, e.g. "a1b2c3d4e5"
+
+  Simplest approach: store the full filename (key + hash) in your database
+  next to the quest content when you generate it, so the template doesn't
+  have to recompute the hash. Example:
+
+    narration_file = f"{narration_key}__{narration_hash}.mp3"
+-->
+
+<div class="narration-control">
+  <button id="narration-btn-{{ narration_key }}" class="narration-btn" type="button">
+    <i class="ti ti-volume-2" aria-hidden="true"></i>
+    <span class="narration-btn-label">Read to me</span>
+  </button>
+  <audio id="narration-audio-{{ narration_key }}" preload="none">
+    <source src="{{ url_for('static', filename='audio/quests/' ~ narration_key ~ '__' ~ narration_hash ~ '.mp3') }}" type="audio/mpeg">
+  </audio>
+</div>
+
+<script>
+(function () {
+  const btn = document.getElementById('narration-btn-{{ narration_key }}');
+  const audio = document.getElementById('narration-audio-{{ narration_key }}');
+  if (!btn || !audio) return;
+
+  let isPlaying = false;
+
+  btn.addEventListener('click', function () {
+    if (isPlaying) {
+      audio.pause();
+      audio.currentTime = 0;
+      isPlaying = false;
+      btn.querySelector('.narration-btn-label').textContent = 'Read to me';
+    } else {
+      // If background music is playing, duck its volume so narration
+      // is easy to hear over it, then restore it when narration ends.
+      if (window.FaithTrailsAudio) {
+        const gp = document.getElementById('gameplay-music');
+        if (gp) gp.volume = 0.12;
+      }
+      audio.play().catch(() => {});
+      isPlaying = true;
+      btn.querySelector('.narration-btn-label').textContent = 'Stop';
+    }
+  });
+
+  audio.addEventListener('ended', function () {
+    isPlaying = false;
+    btn.querySelector('.narration-btn-label').textContent = 'Read to me';
+    const gp = document.getElementById('gameplay-music');
+    if (gp) gp.volume = 0.4;
+  });
+})();
+</script>

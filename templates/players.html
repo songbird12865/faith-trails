@@ -8,6 +8,7 @@
   <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-8">
     {% for player in players %}
     <a href="{{ url_for('select_player', user_id=player['id']) }}"
+       onclick="FaithTrailsAudio.startGameplay()"
        class="flex flex-col items-center justify-center gap-2 rounded-2xl bg-white shadow
               hover:shadow-lg hover:-translate-y-1 transition p-6 border-2 border-transparent
               hover:border-amber-400">

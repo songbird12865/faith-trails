@@ -1,0 +1,105 @@
+.badge-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(20, 20, 20, 0.55);
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+}
+
+.badge-overlay.is-open {
+  display: flex;
+}
+
+.confetti-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.badge-card {
+  position: relative;
+  z-index: 2;
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 2.5rem 2rem;
+  max-width: 420px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+}
+
+.badge-circle {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1.5rem;
+  transform: scale(0);
+  border: 4px solid transparent;
+}
+
+.badge-circle--bronze {
+  background: #f3ddc9;
+  border-color: #b3651c;
+}
+.badge-circle--bronze .badge-star {
+  color: #7a3f0f;
+}
+
+.badge-circle--silver {
+  background: #eceff1;
+  border-color: #9aa3ab;
+}
+.badge-circle--silver .badge-star {
+  color: #4a545c;
+}
+
+.badge-circle--gold {
+  background: #faeeda;
+  border-color: #ef9f27;
+}
+.badge-circle--gold .badge-star {
+  color: #854f0b;
+}
+
+.badge-star {
+  font-size: 56px;
+}
+
+.badge-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0 0 0.5rem;
+  opacity: 0;
+  color: #222;
+}
+
+.badge-subtext {
+  font-size: 17px;
+  color: #555;
+  margin: 0 0 2rem;
+  line-height: 1.5;
+  opacity: 0;
+}
+
+.badge-continue-btn {
+  padding: 12px 32px;
+  font-size: 16px;
+  font-weight: 600;
+  border: none;
+  border-radius: 999px;
+  background: #2f7d5c;
+  color: #fff;
+  cursor: pointer;
+  opacity: 0;
+}
+
+.badge-continue-btn:hover {
+  background: #245f46;
+}
