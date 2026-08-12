@@ -11,9 +11,11 @@ import random
 import secrets
 import os
 from pathlib import Path
+from urllib import request as urlrequest
+from urllib.error import HTTPError, URLError
 from flask import (
     Flask, render_template, g, jsonify, abort, request,
-    session, redirect, url_for,
+    session, redirect, url_for, send_file,
 )
 from narration_utils import build_narration_index
 
@@ -908,6 +910,55 @@ def api_progress():
         (profile["id"],),
     ).fetchall()]
     return jsonify({"quests": quests, "earned": earned})
+
+
+@app.route("/api/narration/<path:filename>")
+def api_narration(filename):
+    """Serve cached narration, generating a missing file securely on demand."""
+    narration_item = next(
+        (item for item in NARRATION_INDEX if item["filename"] == filename),
+        None,
+    )
+    if narration_item is None:
+        abort(404)
+
+    output_dir = BASE_DIR / "static" / "audio" / "quests"
+    output_path = output_dir / filename
+    if output_path.exists():
+        return send_file(output_path, mimetype="audio/mpeg")
+
+    api_key = os.environ.get("ELEVENLABS_API_KEY")
+    if not api_key:
+        return jsonify({"error": "ElevenLabs narration is not configured"}), 503
+
+    voice_id = os.environ.get("ELEVENLABS_VOICE_ID", "Q4oILuo4P8VeXtE6FMLI")
+    payload = json.dumps({
+        "text": narration_item["text"],
+        "model_id": "eleven_multilingual_v2",
+        "voice_settings": {
+            "stability": 0.45,
+            "similarity_boost": 0.8,
+            "style": 0.35,
+            "use_speaker_boost": True,
+        },
+    }).encode("utf-8")
+    eleven_request = urlrequest.Request(
+        f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}",
+        data=payload,
+        headers={"xi-api-key": api_key, "Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urlrequest.urlopen(eleven_request, timeout=45) as response:
+            audio_bytes = response.read()
+    except (HTTPError, URLError, TimeoutError):
+        return jsonify({"error": "Narration could not be generated"}), 502
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    temporary_path = output_path.with_suffix(".tmp")
+    temporary_path.write_bytes(audio_bytes)
+    temporary_path.replace(output_path)
+    return send_file(output_path, mimetype="audio/mpeg")
 
 
 @app.route("/api/complete/<slug>", methods=["POST"])

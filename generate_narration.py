@@ -28,7 +28,8 @@ import sys
 import time
 import requests
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
+sys.path.insert(0, PROJECT_ROOT)
 
 from app import NARRATION_INDEX  # noqa: E402
 
@@ -40,7 +41,7 @@ VOICE_ID = "Q4oILuo4P8VeXtE6FMLI"
 MODEL_ID = "eleven_multilingual_v2"
 
 OUTPUT_DIR = os.path.join(
-    os.path.dirname(__file__), "..", "static", "audio", "quests"
+    PROJECT_ROOT, "static", "audio", "quests"
 )
 
 VOICE_SETTINGS = {

@@ -20,6 +20,12 @@ a completely new database, run `python init_db.py`.
 Set `FAITH_TRAILS_SECRET_KEY` to a long private value in the hosting service.
 Do not change it between restarts, because it protects player sessions.
 
+For ElevenLabs narration, also set `ELEVENLABS_API_KEY` in the server
+environment. `ELEVENLABS_VOICE_ID` is optional; the saved Faith Trails narrator
+voice is used by default. Missing narration is generated once and cached in
+`static/audio/quests`. If ElevenLabs is unavailable, the game uses the device's
+built-in voice instead of remaining silent.
+
 ## Main architecture
 
 - `templates/game.html` is the permanent game shell.
