@@ -9,13 +9,16 @@ import sqlite3
 import json
 import random
 import secrets
+import os
+from pathlib import Path
 from flask import (
     Flask, render_template, g, jsonify, abort, request,
     session, redirect, url_for,
 )
 from narration_utils import build_narration_index
 
-DB_PATH = "faith_trails.db"
+BASE_DIR = Path(__file__).resolve().parent
+DB_PATH = str(BASE_DIR / "faith_trails.db")
 DIFFICULTIES = ("easy", "medium", "hard")
 
 app = Flask(__name__)
@@ -23,7 +26,7 @@ app = Flask(__name__)
 # In production, set this from an environment variable instead of
 # regenerating it on every restart -- otherwise everyone gets logged out
 # each time the server reloads. For the class demo this is fine as-is.
-app.secret_key = secrets.token_hex(16)
+app.secret_key = os.environ.get("FAITH_TRAILS_SECRET_KEY", "faith-trails-local-development-key-change-in-production")
 
 # ---------------------------------------------------------------------------
 # Database helpers
@@ -763,11 +766,12 @@ def home():
         ).fetchall()
     }
     return render_template(
-        "home.html",
-        quests=quests,
-        earned=earned,
+        "game.html",
+        quests=[dict(q) for q in quests],
+        earned=list(earned),
         profile=profile,
         difficulties=DIFFICULTIES,
+        initial_quest=None,
     )
 
 
@@ -845,22 +849,65 @@ def quest(slug):
     if not quest_row["is_available"]:
         return render_template("coming_soon.html", quest=quest_row)
 
-    content = QUEST_CONTENT.get(slug)
-    if content is None:
+    if QUEST_CONTENT.get(slug) is None:
         abort(404)
 
-    difficulty = profile["current_difficulty"]
-    scenes = build_scenes(content, difficulty)
-
+    quests = db.execute("SELECT * FROM quests ORDER BY sort_order").fetchall()
+    earned = {
+        row["quest_id"]
+        for row in db.execute(
+            "SELECT quest_id FROM badges_earned WHERE user_id = ? AND difficulty = ?",
+            (profile["id"], profile["current_difficulty"]),
+        ).fetchall()
+    }
     return render_template(
-        "quest.html",
-        quest=quest_row,
-        scenes_json=json.dumps(scenes),
-        lesson=content["lesson"],
-        lesson_narration_file=content.get("lesson_narration_file"),
-        difficulty=difficulty,
+        "game.html",
+        quests=[dict(q) for q in quests],
+        earned=list(earned),
         profile=profile,
+        difficulties=DIFFICULTIES,
+        initial_quest=slug,
     )
+
+
+@app.route("/api/quest/<slug>")
+def api_quest(slug):
+    """Return one randomized quest playthrough to the permanent game shell."""
+    db = get_db()
+    profile = get_current_user(db)
+    if profile is None:
+        return jsonify({"error": "No player logged in"}), 401
+    quest_row = db.execute("SELECT * FROM quests WHERE slug = ?", (slug,)).fetchone()
+    content = QUEST_CONTENT.get(slug)
+    if quest_row is None or content is None:
+        return jsonify({"error": "Quest not found"}), 404
+    if not quest_row["is_available"]:
+        return jsonify({"error": "Quest coming soon"}), 409
+    difficulty = profile["current_difficulty"]
+    return jsonify({
+        "quest": dict(quest_row),
+        "difficulty": difficulty,
+        "scenes": build_scenes(content, difficulty),
+        "lesson": content["lesson"],
+        "lesson_narration_file": content.get("lesson_narration_file"),
+    })
+
+
+@app.route("/api/progress")
+def api_progress():
+    """Badge and all-difficulty progress for animated in-shell collections."""
+    db = get_db()
+    profile = get_current_user(db)
+    if profile is None:
+        return jsonify({"error": "No player logged in"}), 401
+    quests = [dict(row) for row in db.execute(
+        "SELECT * FROM quests ORDER BY sort_order"
+    ).fetchall()]
+    earned = [dict(row) for row in db.execute(
+        "SELECT quest_id, difficulty, earned_at FROM badges_earned WHERE user_id = ?",
+        (profile["id"],),
+    ).fetchall()]
+    return jsonify({"quests": quests, "earned": earned})
 
 
 @app.route("/api/complete/<slug>", methods=["POST"])

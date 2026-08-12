@@ -1,78 +1,35 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{% block title %}Faith Trails{% endblock %} | A Closer Walk for Kids</title>
-
-<!-- Tailwind via CDN: zero build step, perfect for getting a course project
-     running today. A future version could move to a compiled Tailwind
-     build for production use. -->
-<script src="https://cdn.tailwindcss.com"></script>
-<script>
-  tailwind.config = {
-    theme: {
-      extend: {
-        colors: {
-          parchment: '#FBF3E3',
-          trailgreen: '#2F5233',
-          trailgreendark: '#1E3A22',
-          trailgold: '#D9A73B',
-          trailsky: '#3B7A9C',
-          inkbrown: '#3A2E20',
-        },
-        fontFamily: {
-          display: ['"Baloo 2"', 'sans-serif'],
-          body: ['"Nunito"', 'sans-serif'],
-        },
-      },
-    },
-  };
-</script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#173c2a">
+  <title>{% block title %}Faith Trails{% endblock %} · A Closer Walk for Kids</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config={theme:{extend:{colors:{parchment:'#FBF3E3',trailgreen:'#2F5233',trailgreendark:'#1E3A22',trailgold:'#D9A73B',trailsky:'#3B7A9C',inkbrown:'#3A2E20'},fontFamily:{display:['Baloo 2','sans-serif'],body:['Nunito','sans-serif']}}}}</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static',filename='css/style.css') }}">
+  {% block head %}{% endblock %}
 </head>
 <body class="bg-parchment text-inkbrown font-body min-h-screen">
-
-<audio id="gameplay-music" loop muted preload="auto">
-  <source src="{{ url_for('static', filename='music/gameplay_theme.mp3') }}" type="audio/mpeg">
-</audio>
-
-<header class="bg-trailgreen text-parchment shadow-md">
-  <div class="max-w-3xl mx-auto px-4 sm:px-5 py-3 sm:py-4 flex flex-wrap items-center justify-center sm:justify-between gap-x-4 gap-y-2">
-    <a href="{{ url_for('home') }}" class="font-display text-xl sm:text-2xl font-700 tracking-wide flex items-center gap-2">
-      <span aria-hidden="true">🧭</span> Faith Trails
-    </a>
-    <nav class="flex items-center flex-wrap justify-center gap-3 sm:gap-4">
-      <a href="{{ url_for('badges') }}" class="font-display text-sm sm:text-base font-700 text-parchment/90 hover:text-trailgold transition-colors flex items-center gap-1">
-        <span aria-hidden="true">🏅</span> <span>My Badges</span>
-      </a>
-      <a href="{{ url_for('hall_of_fame') }}" class="font-display text-sm sm:text-base font-700 text-parchment/90 hover:text-trailgold transition-colors flex items-center gap-1">
-        <span aria-hidden="true">🏆</span> <span>Hall of Fame</span>
-      </a>
-      {% if profile %}
-      <span class="text-xs sm:text-sm text-parchment/80 font-body hidden sm:inline">
-        Playing as <span class="font-700 text-trailgold">{{ profile['name'] }}</span>
-      </span>
-      <a href="{{ url_for('logout') }}" class="font-display text-sm sm:text-base font-700 text-parchment/90 hover:text-trailgold transition-colors flex items-center gap-1">
-        <span aria-hidden="true">🔄</span> <span>Switch Player</span>
-      </a>
-      {% endif %}
-      <span class="text-xs sm:text-sm text-parchment/80 font-body italic hidden sm:inline">A Closer Walk Kids experience</span>
-    </nav>
+  <audio id="gameplay-music" loop preload="auto"><source src="{{ url_for('static',filename='music/gameplay_theme.mp3') }}" type="audio/mpeg"></audio>
+  <audio id="celebration-music" loop preload="auto"><source src="{{ url_for('static',filename='music/celebration_theme.mp3') }}" type="audio/mpeg"></audio>
+  <div id="audio-gate" class="audio-gate" role="dialog" aria-modal="true">
+    <div class="audio-gate-card"><div class="gate-compass">🧭</div><h1>Faith Trails</h1><p>A Closer Walk for Kids</p><button id="start-adventure">Start Adventure</button></div>
   </div>
-</header>
-
-<main class="max-w-3xl mx-auto px-5 py-8">
-  {% block content %}{% endblock %}
-</main>
-
-<footer class="text-center text-xs text-inkbrown/50 font-body py-8">
-  Faith Trails &middot; A Closer Walk Kids
-</footer>
-
-<script src="{{ url_for('static', filename='js/background_music.js') }}"></script>
-
+  <header class="app-header">
+    <a href="{{ url_for('home') }}" class="brand-button" data-game-home><span>🧭</span> Faith Trails</a>
+    <div class="header-actions">
+      {% if profile %}<span class="player-chip">Explorer: {{ profile['name'] }}</span>{% endif %}
+      <button id="music-toggle" class="round-control" aria-label="Turn music off">♫</button>
+      <a href="{{ url_for('badges') }}" class="round-control" data-game-screen="badges" aria-label="My badges">🏅</a>
+      <a href="{{ url_for('hall_of_fame') }}" class="round-control" data-game-screen="hall" aria-label="Hall of Fame">🏆</a>
+      {% if profile %}<a href="{{ url_for('logout') }}" class="round-control" aria-label="Switch player">↻</a>{% endif %}
+    </div>
+  </header>
+  <main id="app-main">{% block content %}{% endblock %}</main>
+  <script src="{{ url_for('static',filename='js/audio-engine.js') }}"></script>
+  {% block scripts %}{% endblock %}
 </body>
 </html>

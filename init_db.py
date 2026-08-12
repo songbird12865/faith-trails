@@ -5,12 +5,15 @@ faith_trails.db from schema.sql.
     python init_db.py
 """
 import sqlite3
+from pathlib import Path
 
-DB_PATH = "faith_trails.db"
+BASE_DIR = Path(__file__).resolve().parent
+DB_PATH = BASE_DIR / "faith_trails.db"
+SCHEMA_PATH = BASE_DIR / "schema.sql"
 
 def init_db():
     conn = sqlite3.connect(DB_PATH)
-    with open("schema.sql", "r", encoding="utf-8") as f:
+    with open(SCHEMA_PATH, "r", encoding="utf-8") as f:
         conn.executescript(f.read())
     conn.commit()
     conn.close()
