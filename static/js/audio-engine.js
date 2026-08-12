@@ -4,7 +4,10 @@
   const gate=document.getElementById('audio-gate');
   const start=document.getElementById('start-adventure');
   const toggle=document.getElementById('music-toggle');
-  let active=gameplay, muted=localStorage.getItem('ft-muted')==='1';
+  const gameplaySrc=gameplay.querySelector('source')?.src||gameplay.src;
+  const celebrationSrc=celebration.querySelector('source')?.src||celebration.src;
+  let active=gameplay, mode='gameplay', savedGameplayTime=0;
+  let muted=localStorage.getItem('ft-muted')==='1';
   const fadeGeneration=new WeakMap();
   const fade=(el,to,ms=500)=>{
     if(!el)return;
@@ -21,8 +24,8 @@
   };
   function syncToggle(){if(toggle){toggle.textContent=muted?'♪':'♫';toggle.setAttribute('aria-label',muted?'Turn music on':'Turn music off')}}
   async function unlock(){
+    celebration.pause();celebration.currentTime=0;
     gameplay.volume=0;gameplay.muted=muted;
-    celebration.volume=0;celebration.muted=true;
     try{
       await gameplay.play();
     }catch(e){
@@ -37,19 +40,33 @@
     sessionStorage.setItem('ft-audio-unlocked','1');
     active=gameplay;
     fade(gameplay,.32,700);
-
-    // Prime the separate celebration player during the same permitted tap.
-    // Failure here does not stop the gameplay track.
-    celebration.play().then(()=>{
-      celebration.pause();celebration.currentTime=0;celebration.muted=muted;
-    }).catch(()=>{celebration.pause();celebration.currentTime=0;celebration.muted=muted});
   }
   if(sessionStorage.getItem('ft-audio-unlocked')==='1') unlock();
   start?.addEventListener('click',unlock);
   toggle?.addEventListener('click',()=>{muted=!muted;localStorage.setItem('ft-muted',muted?'1':'0');gameplay.muted=celebration.muted=muted;syncToggle()});syncToggle();
   window.FaithTrailsAudio={
-    duck(){fade(active,.025,180)},unduck(){fade(active,active===celebration?.40:.32,450)},
-    celebrate(){if(!celebration)return;celebration.currentTime=0;celebration.volume=0;celebration.muted=muted;celebration.play().then(()=>fade(celebration,.4,650)).catch(()=>{});fade(gameplay,0,400);setTimeout(()=>gameplay.pause(),420);active=celebration},
-    gameplay(){if(!gameplay)return;fade(celebration,0,350);setTimeout(()=>{celebration.pause();gameplay.volume=0;gameplay.muted=muted;gameplay.play().catch(()=>{});fade(gameplay,.32,650);active=gameplay},330)}
+    duck(){fade(active,.025,180)},unduck(){fade(active,mode==='celebration'?.40:.32,450)},
+    celebrate(){
+      if(!gameplay||mode==='celebration')return;
+      savedGameplayTime=gameplay.currentTime||0;
+      celebration.pause();celebration.currentTime=0;
+      mode='celebration';
+      gameplay.pause();gameplay.src=celebrationSrc;gameplay.load();
+      gameplay.currentTime=0;gameplay.volume=0;gameplay.muted=muted;
+      gameplay.play().then(()=>fade(gameplay,.40,650)).catch(()=>{});
+      active=gameplay;
+    },
+    gameplay(){
+      if(!gameplay||mode==='gameplay')return;
+      celebration.pause();celebration.currentTime=0;
+      mode='gameplay';
+      gameplay.pause();gameplay.src=gameplaySrc;gameplay.load();
+      gameplay.addEventListener('loadedmetadata',()=>{
+        gameplay.currentTime=Math.min(savedGameplayTime,Math.max(0,gameplay.duration-.25));
+      },{once:true});
+      gameplay.volume=0;gameplay.muted=muted;
+      gameplay.play().then(()=>fade(gameplay,.32,650)).catch(()=>{});
+      active=gameplay;
+    }
   };
 })();
