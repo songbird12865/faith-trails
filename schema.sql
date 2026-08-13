@@ -54,6 +54,6 @@ INSERT INTO quests (slug, title, summary, icon, sort_order, is_available) VALUES
     ('noahs-ark', 'Noah''s Ark', 'Help gather the animals two by two!', '🐘', 1, 1),
     ('josephs-coat', 'Joseph''s Colorful Coat', 'A gift of many colors starts a big adventure.', '🧥', 2, 1),
     ('red-sea', 'Moses and the Red Sea', 'Watch the sea part in an amazing rescue.', '🌊', 3, 1),
-    ('david-goliath', 'David & Goliath', 'A small shepherd faces a giant.', '🪨', 4, 0),
-    ('jonah-big-fish', 'Jonah and the Big Fish', 'Swallowed up on a wild, watery journey.', '🐋', 5, 0),
-    ('daniel-lions-den', 'Daniel and the Lions'' Den', 'Stay brave through a scary night.', '🦁', 6, 0);
+    ('david-goliath', 'David & Goliath', 'A small shepherd faces a giant.', '🪨', 4, 1),
+    ('jonah-big-fish', 'Jonah and the Big Fish', 'Swallowed up on a wild, watery journey.', '🐋', 5, 1),
+    ('daniel-lions-den', 'Daniel and the Lions'' Den', 'Stay brave through a scary night.', '🦁', 6, 1);

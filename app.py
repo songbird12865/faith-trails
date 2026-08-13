@@ -17,7 +17,7 @@ from flask import (
     Flask, render_template, g, jsonify, abort, request,
     session, redirect, url_for, send_file,
 )
-from narration_utils import build_narration_index
+from narration_utils import build_narration_index, narration_filename
 
 BASE_DIR = Path(__file__).resolve().parent
 DB_PATH = str(BASE_DIR / "faith_trails.db")
@@ -656,6 +656,228 @@ QUEST_CONTENT = {
         },
         "lesson": "When we're afraid, we can be still and trust God to fight for us.",
     },
+    "david-goliath": {
+        "title": "David & Goliath",
+        "intro_scenes": [
+            {
+                "type": "story",
+                "emoji": "😨",
+                "text": "The Israelite army was afraid. Every day, a giant named Goliath stood before them and dared anyone to fight him.",
+            },
+            {
+                "type": "story",
+                "emoji": "🐑",
+                "text": "David was only a young shepherd, but he trusted God completely. He told King Saul that he would face the giant.",
+            },
+        ],
+        "interactive_by_difficulty": {
+            "easy": {
+                "type": "interactive", "subtype": "matching",
+                "prompt": "Help David prepare! Put the five smooth stones into his shepherd's bag.",
+                "items": [
+                    {"id": "stone-1", "emoji": "🪨", "label": "Smooth stone 1"},
+                    {"id": "stone-2", "emoji": "🪨", "label": "Smooth stone 2"},
+                    {"id": "stone-3", "emoji": "🪨", "label": "Smooth stone 3"},
+                    {"id": "stone-4", "emoji": "🪨", "label": "Smooth stone 4"},
+                    {"id": "stone-5", "emoji": "🪨", "label": "Smooth stone 5"},
+                ],
+            },
+            "medium": {
+                "type": "interactive", "subtype": "sequence",
+                "prompt": "Tap these events in the order they happened!",
+                "items": [
+                    {"id": "challenge", "emoji": "📣", "label": "Goliath challenges Israel"},
+                    {"id": "volunteer", "emoji": "🙋", "label": "David offers to fight"},
+                    {"id": "armor", "emoji": "🛡️", "label": "David refuses Saul's armor"},
+                    {"id": "stones", "emoji": "🪨", "label": "David chooses five smooth stones"},
+                    {"id": "victory", "emoji": "🎯", "label": "God gives David victory"},
+                ],
+            },
+            "hard": {
+                "type": "interactive", "subtype": "sequence",
+                "prompt": "Tap all seven events in the exact order they happened!",
+                "items": [
+                    {"id": "fear", "emoji": "😨", "label": "Israel's army is afraid"},
+                    {"id": "challenge", "emoji": "📣", "label": "Goliath challenges Israel"},
+                    {"id": "volunteer", "emoji": "🙋", "label": "David tells Saul he will fight"},
+                    {"id": "armor", "emoji": "🛡️", "label": "David refuses Saul's heavy armor"},
+                    {"id": "stones", "emoji": "🪨", "label": "David chooses five smooth stones"},
+                    {"id": "faith", "emoji": "🙏", "label": "David says the battle belongs to God"},
+                    {"id": "victory", "emoji": "🎯", "label": "The stone strikes Goliath down"},
+                ],
+            },
+        },
+        "outro_scenes": [
+            {
+                "type": "story",
+                "emoji": "🛡️",
+                "text": "David refused Saul's heavy armor. He picked up five smooth stones and his sling, trusting God instead of weapons.",
+            },
+            {
+                "type": "story",
+                "emoji": "🎯",
+                "text": "David said the battle belonged to God. He swung his sling, the stone struck Goliath down, and the whole army saw what faith could do.",
+            },
+        ],
+        "quiz_bank_by_difficulty": {
+            "easy": [
+                {"type": "quiz", "prompt": "Who was the giant?", "options": ["Goliath", "Saul", "Jonah"], "correct_index": 0},
+                {"type": "quiz", "prompt": "What did David use to face Goliath?", "options": ["A sling and stones", "A spear", "A chariot"], "correct_index": 0},
+                {"type": "quiz", "prompt": "Who gave David the victory?", "options": ["God", "King Saul", "The army"], "correct_index": 0},
+            ],
+            "medium": [
+                {"type": "quiz", "prompt": "Why was David willing to face Goliath?", "options": ["He trusted God completely", "He was taller than Goliath", "He had magical armor"], "correct_index": 0},
+                {"type": "quiz", "prompt": "Why did David refuse Saul's armor?", "options": ["He trusted God instead of heavy weapons", "It belonged to Goliath", "It was made of wood"], "correct_index": 0},
+                {"type": "quiz", "prompt": "How many smooth stones did David choose?", "options": ["Five", "Three", "Twelve"], "correct_index": 0},
+            ],
+            "hard": [
+                {"type": "quiz", "prompt": "What did Goliath do when he saw David?", "options": ["He laughed at and mocked him", "He surrendered immediately", "He asked David for help"], "correct_index": 0},
+                {"type": "quiz", "prompt": "What did David say about the battle?", "options": ["The battle belongs to the Lord", "The strongest soldier always wins", "Saul's armor would save him"], "correct_index": 0},
+                {"type": "quiz", "prompt": "What did the Israelite army learn from David's victory?", "options": ["What faith in God could do", "How to build better armor", "Why shepherds should be kings"], "correct_index": 0},
+            ],
+        },
+        "quiz_count_by_difficulty": {"easy": 2, "medium": 2, "hard": 3},
+        "verse_bank_by_difficulty": {
+            "easy": [{"type": "memory_verse", "verse": "The battle is the Lord's.", "reference": "1 Samuel 17:47", "reference_options": ["1 Samuel 17:47", "1 Samuel 7:47", "2 Samuel 17:47"]}],
+            "medium": [{"type": "memory_verse", "verse": "It is not by sword or spear that the Lord saves; for the battle is the Lord's.", "reference": "1 Samuel 17:47", "reference_options": ["1 Samuel 17:47", "1 Samuel 17:37", "2 Samuel 17:47"]}],
+            "hard": [{"type": "memory_verse", "verse": "The Lord who rescued me from the paw of the lion and the paw of the bear will rescue me from the hand of this Philistine.", "reference": "1 Samuel 17:37", "reference_options": ["1 Samuel 17:37", "1 Samuel 17:47", "2 Samuel 17:37"]}],
+        },
+        "lesson": "Courage grows when we trust that God is bigger than every giant we face.",
+    },
+    "jonah-big-fish": {
+        "title": "Jonah and the Big Fish",
+        "intro_scenes": [
+            {"type": "story", "emoji": "🏙️", "text": "God asked Jonah to go to Nineveh and warn the people to turn back to Him."},
+            {"type": "story", "emoji": "⛵", "text": "Jonah was afraid and ran the other way. He boarded a ship headed far from Nineveh."},
+        ],
+        "interactive_by_difficulty": {
+            "easy": {
+                "type": "interactive", "subtype": "sequence", "prompt": "Tap these three events in the order they happened!",
+                "items": [
+                    {"id": "run", "emoji": "⛵", "label": "Jonah sails away"},
+                    {"id": "storm", "emoji": "🌊", "label": "A huge storm hits"},
+                    {"id": "fish", "emoji": "🐋", "label": "A big fish swallows Jonah"},
+                ],
+            },
+            "medium": {
+                "type": "interactive", "subtype": "sequence", "prompt": "Tap these five events in the order they happened!",
+                "items": [
+                    {"id": "call", "emoji": "🏙️", "label": "God sends Jonah to Nineveh"},
+                    {"id": "run", "emoji": "⛵", "label": "Jonah sails the other way"},
+                    {"id": "storm", "emoji": "🌊", "label": "A huge storm hits"},
+                    {"id": "sea", "emoji": "🤿", "label": "Jonah is thrown into the sea"},
+                    {"id": "fish", "emoji": "🐋", "label": "A big fish swallows Jonah"},
+                ],
+            },
+            "hard": {
+                "type": "interactive", "subtype": "sequence", "prompt": "Tap all seven events in the exact order they happened!",
+                "items": [
+                    {"id": "call", "emoji": "🏙️", "label": "God sends Jonah to Nineveh"},
+                    {"id": "run", "emoji": "⛵", "label": "Jonah sails in the opposite direction"},
+                    {"id": "storm", "emoji": "🌊", "label": "A huge storm terrifies the sailors"},
+                    {"id": "sea", "emoji": "🤿", "label": "The sailors throw Jonah into the sea"},
+                    {"id": "calm", "emoji": "☀️", "label": "The water becomes calm"},
+                    {"id": "fish", "emoji": "🐋", "label": "Jonah prays inside the fish"},
+                    {"id": "obey", "emoji": "🙏", "label": "Jonah obeys and goes to Nineveh"},
+                ],
+            },
+        },
+        "outro_scenes": [
+            {"type": "story", "emoji": "🌊", "text": "Jonah told the sailors to throw him into the sea. The moment they did, the storm became calm, and God sent a huge fish to swallow Jonah."},
+            {"type": "story", "emoji": "🙏", "text": "Jonah prayed inside the fish for three days and three nights. God had the fish spit him onto dry land, and Jonah obeyed God the second time."},
+        ],
+        "quiz_bank_by_difficulty": {
+            "easy": [
+                {"type": "quiz", "prompt": "Where did God ask Jonah to go?", "options": ["Nineveh", "Egypt", "Bethlehem"], "correct_index": 0},
+                {"type": "quiz", "prompt": "What swallowed Jonah?", "options": ["A huge fish", "A lion", "A crocodile"], "correct_index": 0},
+                {"type": "quiz", "prompt": "What did Jonah do inside the fish?", "options": ["He prayed to God", "He built a boat", "He went to sleep"], "correct_index": 0},
+            ],
+            "medium": [
+                {"type": "quiz", "prompt": "Why did Jonah board a ship?", "options": ["He was running away from what God asked him to do", "God told him to sail", "He wanted to catch fish"], "correct_index": 0},
+                {"type": "quiz", "prompt": "What happened when Jonah was thrown into the sea?", "options": ["The water became calm", "The storm grew stronger", "The ship sank"], "correct_index": 0},
+                {"type": "quiz", "prompt": "How long was Jonah inside the fish?", "options": ["Three days and three nights", "One day", "Forty days"], "correct_index": 0},
+            ],
+            "hard": [
+                {"type": "quiz", "prompt": "What message was Jonah supposed to take to Nineveh?", "options": ["The people should turn back to God", "The people should build a ship", "The city should choose a new king"], "correct_index": 0},
+                {"type": "quiz", "prompt": "Why did Jonah believe the storm had come?", "options": ["Because he had run from God", "Because the sailors were lost", "Because the ship was too heavy"], "correct_index": 0},
+                {"type": "quiz", "prompt": "What happened when Jonah finally went to Nineveh?", "options": ["The people listened", "The people sent him away", "Another storm began"], "correct_index": 0},
+            ],
+        },
+        "quiz_count_by_difficulty": {"easy": 2, "medium": 2, "hard": 3},
+        "verse_bank_by_difficulty": {
+            "easy": [{"type": "memory_verse", "verse": "In my distress I called to the Lord, and he answered me.", "reference": "Jonah 2:2", "reference_options": ["Jonah 2:2", "Jonah 1:2", "Joel 2:2"]}],
+            "medium": [{"type": "memory_verse", "verse": "Then the word of the Lord came to Jonah a second time.", "reference": "Jonah 3:1", "reference_options": ["Jonah 3:1", "Jonah 1:3", "Joel 3:1"]}],
+            "hard": [{"type": "memory_verse", "verse": "Those who cling to worthless idols turn away from God's love for them.", "reference": "Jonah 2:8", "reference_options": ["Jonah 2:8", "Jonah 3:8", "Joel 2:8"]}],
+        },
+        "lesson": "God gives second chances, and obeying Him is always the right direction.",
+    },
+    "daniel-lions-den": {
+        "title": "Daniel and the Lions' Den",
+        "intro_scenes": [
+            {"type": "story", "emoji": "🙏", "text": "Daniel loved God and prayed to Him every day, even after moving to a new kingdom with different rules."},
+            {"type": "story", "emoji": "📜", "text": "Jealous officials tricked the king into making a law: anyone who prayed to anyone but the king would be thrown to the lions."},
+        ],
+        "interactive_by_difficulty": {
+            "easy": {
+                "type": "interactive", "subtype": "matching", "prompt": "Help the angel! Gently guide each lion to a quiet resting place.",
+                "items": [
+                    {"id": "lion-1", "emoji": "🦁", "label": "Lion 1"},
+                    {"id": "lion-2", "emoji": "🦁", "label": "Lion 2"},
+                    {"id": "lion-3", "emoji": "🦁", "label": "Lion 3"},
+                ],
+            },
+            "medium": {
+                "type": "interactive", "subtype": "sequence", "prompt": "Tap these five events in the order they happened!",
+                "items": [
+                    {"id": "law", "emoji": "📜", "label": "The king signs the new law"},
+                    {"id": "pray", "emoji": "🙏", "label": "Daniel keeps praying to God"},
+                    {"id": "caught", "emoji": "👀", "label": "The officials catch Daniel"},
+                    {"id": "den", "emoji": "🦁", "label": "Daniel is placed in the lions' den"},
+                    {"id": "safe", "emoji": "😇", "label": "God keeps Daniel safe"},
+                ],
+            },
+            "hard": {
+                "type": "interactive", "subtype": "sequence", "prompt": "Tap all seven events in the exact order they happened!",
+                "items": [
+                    {"id": "jealous", "emoji": "😠", "label": "Jealous officials plan a trap"},
+                    {"id": "law", "emoji": "📜", "label": "The king signs the prayer law"},
+                    {"id": "pray", "emoji": "🙏", "label": "Daniel prays as he always has"},
+                    {"id": "caught", "emoji": "👀", "label": "The officials report Daniel"},
+                    {"id": "den", "emoji": "🦁", "label": "Daniel is thrown into the den"},
+                    {"id": "angel", "emoji": "😇", "label": "God's angel shuts the lions' mouths"},
+                    {"id": "morning", "emoji": "🌅", "label": "The king finds Daniel safe"},
+                ],
+            },
+        },
+        "outro_scenes": [
+            {"type": "story", "emoji": "🦁", "text": "Daniel kept praying to God, just as he always had. The officials caught him, and the saddened king had Daniel thrown into the lions' den."},
+            {"type": "story", "emoji": "😇", "text": "God sent an angel to shut the lions' mouths. In the morning, the king found Daniel completely safe because Daniel had trusted God."},
+        ],
+        "quiz_bank_by_difficulty": {
+            "easy": [
+                {"type": "quiz", "prompt": "Who did Daniel pray to?", "options": ["God", "The king", "The officials"], "correct_index": 0},
+                {"type": "quiz", "prompt": "Where was Daniel thrown?", "options": ["Into the lions' den", "Into the sea", "Into a prison tower"], "correct_index": 0},
+                {"type": "quiz", "prompt": "Who kept Daniel safe?", "options": ["God", "The officials", "A soldier"], "correct_index": 0},
+            ],
+            "medium": [
+                {"type": "quiz", "prompt": "Why did the officials make a plan against Daniel?", "options": ["They were jealous of him", "Daniel had broken the palace", "The king ordered them to"], "correct_index": 0},
+                {"type": "quiz", "prompt": "What did Daniel do after he heard about the new law?", "options": ["He kept praying to God", "He prayed to the king", "He stopped praying"], "correct_index": 0},
+                {"type": "quiz", "prompt": "What did God send to protect Daniel?", "options": ["An angel", "A shepherd", "A storm"], "correct_index": 0},
+            ],
+            "hard": [
+                {"type": "quiz", "prompt": "What punishment did the new law require for praying to anyone but the king?", "options": ["Being thrown to the lions", "Leaving the kingdom", "Paying the king gold"], "correct_index": 0},
+                {"type": "quiz", "prompt": "How often had Daniel been praying before the law was made?", "options": ["Every day", "Only on special days", "Once a year"], "correct_index": 0},
+                {"type": "quiz", "prompt": "Why was Daniel unharmed in the morning?", "options": ["He trusted God, who protected him", "The lions were not in the den", "The king secretly rescued him"], "correct_index": 0},
+            ],
+        },
+        "quiz_count_by_difficulty": {"easy": 2, "medium": 2, "hard": 3},
+        "verse_bank_by_difficulty": {
+            "easy": [{"type": "memory_verse", "verse": "My God sent his angel, and he shut the mouths of the lions.", "reference": "Daniel 6:22", "reference_options": ["Daniel 6:22", "Daniel 6:12", "David 6:22"]}],
+            "medium": [{"type": "memory_verse", "verse": "He got down on his knees and prayed, giving thanks to his God, just as he had done before.", "reference": "Daniel 6:10", "reference_options": ["Daniel 6:10", "Daniel 6:20", "Daniel 3:10"]}],
+            "hard": [{"type": "memory_verse", "verse": "He is the living God and he endures forever; his kingdom will not be destroyed, his dominion will never end.", "reference": "Daniel 6:26", "reference_options": ["Daniel 6:26", "Daniel 3:26", "Daniel 6:16"]}],
+        },
+        "lesson": "We can stay faithful and trust God, even when doing the right thing feels scary.",
+    },
 }
 
 # Attaches a "narration_file" field to every scene/question/verse dict
@@ -664,6 +886,16 @@ QUEST_CONTENT = {
 # once here, at import time, so every request already has the filenames
 # baked in with zero extra per-request work.
 NARRATION_INDEX = build_narration_index(QUEST_CONTENT)
+CHAMPION_NARRATION_TEXT = (
+    "You followed Noah, Joseph, Moses, David, Jonah, and Daniel through every adventure. "
+    "Each one trusted God in a different way—and now you know that you can trust Him too."
+)
+CHAMPION_NARRATION_FILE = narration_filename("faith-trails-champion", CHAMPION_NARRATION_TEXT)
+NARRATION_INDEX.append({
+    "key": "faith-trails-champion",
+    "text": CHAMPION_NARRATION_TEXT,
+    "filename": CHAMPION_NARRATION_FILE,
+})
 
 
 # ---------------------------------------------------------------------------

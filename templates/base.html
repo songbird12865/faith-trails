@@ -16,6 +16,7 @@
   <audio id="gameplay-music" loop preload="auto"><source src="{{ url_for('static',filename='music/gameplay_theme.mp3') }}" type="audio/mpeg"></audio>
   <audio id="celebration-music" loop preload="auto"><source src="{{ url_for('static',filename='music/celebration_theme.mp3') }}" type="audio/mpeg"></audio>
   <div id="audio-gate" class="audio-gate" role="dialog" aria-modal="true">
+    <div class="audio-gate-shade" aria-hidden="true"></div>
     <div class="audio-gate-card"><div class="gate-compass">🧭</div><h1>Faith Trails</h1><p>A Closer Walk for Kids</p><button id="start-adventure">Start Adventure</button></div>
   </div>
   <header class="app-header">
