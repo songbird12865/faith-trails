@@ -48,8 +48,21 @@
     // current level, while Hall of Fame summarizes all three difficulties.
     const r=await fetch('/api/progress');if(!r.ok)return toast('Progress could not be loaded.');const data=await r.json();
     const title=kind==='badges'?'My Badge Collection':'Hall of Fame';
-    mapView.innerHTML=`<div class="hero"><div class="hero-kicker">${esc(boot.profile.name)}’s achievements</div><h1>${title}</h1><p>${kind==='badges'?'Every completed trail adds another badge to your collection.':'Badges earned across Easy, Medium, and Hard adventures.'}</p><button id="collection-back" class="primary-button">← Back to Trail</button></div><div class="map-grid"></div>`;
-    const grid=mapView.querySelector('.map-grid');data.quests.filter(q=>q.is_available).forEach((q,i)=>{const levels=data.earned.filter(e=>e.quest_id===q.id).map(e=>e.difficulty);const earned=kind==='badges'?levels.includes(boot.profile.current_difficulty):levels.length>0;const el=document.createElement('article');el.className='quest-tile';el.style.animationDelay=`${i*.08}s`;el.innerHTML=`${earned?'<span class="earned-check">✓</span>':''}<img src="${img(q.slug)}" alt=""><div class="tile-copy"><h2>${esc(q.title)}</h2><p>${kind==='badges'?(earned?`${esc(boot.profile.current_difficulty)} badge earned`:'Complete this trail to earn it'):`${['easy','medium','hard'].map(x=>levels.includes(x)?'★':'☆').join(' ')} ${levels.length}/3 levels`}</p></div>`;grid.appendChild(el)});mapView.querySelector('#collection-back').onclick=renderMap;
+    mapView.innerHTML=`<div class="hero"><div class="hero-kicker">${esc(boot.profile.name)}’s achievements</div><h1>${title}</h1><p>${kind==='badges'?'Every completed trail adds another badge to your collection.':'All 18 badges across Easy, Medium, and Hard adventures.'}</p><button id="collection-back" class="primary-button">← Back to Trail</button></div><div id="collection-content"></div>`;
+    const content=mapView.querySelector('#collection-content');
+    if(kind==='hall'){
+      // Hall of Fame is a true 6 × 3 progress grid: one row per adventure and
+      // one badge position for each difficulty. Keep this separate from the
+      // large cards used by the current-difficulty "My Badges" collection.
+      const levels=['easy','medium','hard'];
+      const earnedKeys=new Set(data.earned.map(e=>`${e.quest_id}:${e.difficulty}`));
+      const earnedCount=data.earned.filter(e=>levels.includes(e.difficulty)).length;
+      content.innerHTML=`<section class="hof-board"><div class="hof-summary"><strong>${earnedCount} of 18 earned</strong><div class="hof-meter" role="progressbar" aria-label="Hall of Fame badges earned" aria-valuemin="0" aria-valuemax="18" aria-valuenow="${earnedCount}"><span style="width:${earnedCount/18*100}%"></span></div></div><div class="hof-table-wrap"><table class="hof-table"><thead><tr><th scope="col">Adventure</th>${levels.map(level=>`<th scope="col" class="hof-${level}">${level}</th>`).join('')}</tr></thead><tbody>${data.quests.filter(q=>q.is_available).map(q=>`<tr><th scope="row"><img src="${img(q.slug)}" alt=""><span>${esc(q.title)}</span></th>${levels.map(level=>{const earned=earnedKeys.has(`${q.id}:${level}`);return `<td><span class="hof-badge hof-badge--${level} ${earned?'is-earned':'is-waiting'}" aria-label="${esc(q.title)} ${level} badge ${earned?'earned':'not earned'}"><img src="${img(q.slug)}" alt="" aria-hidden="true"><span>${earned?'✓':'☆'}</span></span></td>`}).join('')}</tr>`).join('')}</tbody></table></div><div class="hof-legend"><span><i class="hof-dot hof-dot--easy"></i>Easy · Bronze</span><span><i class="hof-dot hof-dot--medium"></i>Medium · Silver</span><span><i class="hof-dot hof-dot--hard"></i>Hard · Gold</span></div></section>`;
+    }else{
+      content.className='map-grid';
+      data.quests.filter(q=>q.is_available).forEach((q,i)=>{const levels=data.earned.filter(e=>e.quest_id===q.id).map(e=>e.difficulty);const earned=levels.includes(boot.profile.current_difficulty);const el=document.createElement('article');el.className='quest-tile';el.style.animationDelay=`${i*.08}s`;el.innerHTML=`${earned?'<span class="earned-check">✓</span>':''}<img src="${img(q.slug)}" alt=""><div class="tile-copy"><h2>${esc(q.title)}</h2><p>${earned?`${esc(boot.profile.current_difficulty)} badge earned`:'Complete this trail to earn it'}</p></div>`;content.appendChild(el)});
+    }
+    mapView.querySelector('#collection-back').onclick=renderMap;
   }
   async function changeDifficulty(level){if(level===boot.profile.current_difficulty)return;const r=await fetch('/api/profile',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({difficulty:level})});if(r.ok)location.reload();else toast('Could not change difficulty.')}
 
