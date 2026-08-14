@@ -6,6 +6,7 @@
   <h1 class="text-3xl font-bold text-slate-800 mb-8">Who's Playing?</h1>
 
   <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-8">
+    {# Player selection stores only the profile ID in the Flask session. #}
     {% for player in players %}
     <a href="{{ url_for('select_player', user_id=player['id']) }}"
        onclick="FaithTrailsAudio.startGameplay()"

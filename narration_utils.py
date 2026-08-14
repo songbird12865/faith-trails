@@ -27,10 +27,12 @@ DIFFICULTIES = ("easy", "medium", "hard")
 
 
 def text_hash(text):
+    """Return a short stable content hash used for cache invalidation."""
     return hashlib.sha256(text.encode("utf-8")).hexdigest()[:10]
 
 
 def narration_filename(key, text):
+    """Build a human-readable, content-addressed MP3 filename."""
     return f"{key}__{text_hash(text)}.mp3"
 
 
@@ -44,6 +46,8 @@ def build_narration_index(quest_content):
     index = []
 
     def register(item, key, text_field):
+        # Mutating the source dictionary deliberately keeps the generated
+        # filename beside the exact content that the browser later receives.
         text = item[text_field]
         filename = narration_filename(key, text)
         item["narration_file"] = filename

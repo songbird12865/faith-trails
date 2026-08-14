@@ -1,3 +1,4 @@
+/* Full-screen reward shown after the server records quest completion. */
 .badge-overlay {
   display: none;
   position: fixed;
@@ -13,6 +14,7 @@
   display: flex;
 }
 
+/* Decorative canvas must stay behind the card and never capture input. */
 .confetti-canvas {
   position: absolute;
   inset: 0;

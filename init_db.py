@@ -12,6 +12,12 @@ DB_PATH = BASE_DIR / "faith_trails.db"
 SCHEMA_PATH = BASE_DIR / "schema.sql"
 
 def init_db():
+    """Recreate the development database from the versioned SQL schema.
+
+    This is intentionally a reset operation because schema.sql drops existing
+    tables before seeding them. Do not run it against a database whose player
+    progress must be preserved.
+    """
     conn = sqlite3.connect(DB_PATH)
     with open(SCHEMA_PATH, "r", encoding="utf-8") as f:
         conn.executescript(f.read())

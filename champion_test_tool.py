@@ -36,6 +36,7 @@ def database_path() -> Path:
 
 
 def connect_database() -> sqlite3.Connection:
+    """Open the local database with row names and foreign keys enabled."""
     path = database_path()
     if not path.is_file():
         raise SystemExit(
@@ -49,6 +50,7 @@ def connect_database() -> sqlite3.Connection:
 
 
 def verify_schema(database: sqlite3.Connection) -> list[sqlite3.Row]:
+    """Refuse to modify a database unless the expected six-quest schema exists."""
     table_names = {
         row["name"]
         for row in database.execute(
@@ -86,6 +88,7 @@ def verify_schema(database: sqlite3.Connection) -> list[sqlite3.Row]:
 
 
 def make_backup() -> Path:
+    """Create a timestamped recovery copy before changing test data."""
     source = database_path()
     backup_dir = source.parent / "test_backups"
     backup_dir.mkdir(exist_ok=True)
@@ -103,6 +106,7 @@ def get_test_player(database: sqlite3.Connection) -> sqlite3.Row | None:
 
 
 def setup_test() -> None:
+    """Prepare one isolated player with exactly 17 of the 18 badges."""
     database = connect_database()
     try:
         quests = verify_schema(database)
@@ -193,6 +197,7 @@ def show_status() -> None:
 
 
 def cleanup_test() -> None:
+    """Delete only the specially named test player and that player's badges."""
     database = connect_database()
     try:
         verify_schema(database)

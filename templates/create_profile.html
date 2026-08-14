@@ -45,6 +45,8 @@
 </div>
 
 <script>
+  // Difficulty is selected with buttons, so retain it in local state until the
+  // name and level can be submitted to the profile API together.
   let selectedDifficulty = null;
   const difficultyButtons = document.querySelectorAll('.difficulty-option');
 
@@ -75,6 +77,8 @@
       return;
     }
 
+    // A successful API response also establishes the Flask session before the
+    // browser moves to the signed-in trail map.
     try {
       const res = await fetch('/api/profile', {
         method: 'POST',

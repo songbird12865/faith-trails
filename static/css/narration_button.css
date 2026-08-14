@@ -1,3 +1,4 @@
+/* Optional replay control for screens that expose manual narration. */
 .narration-control {
   display: inline-flex;
   margin: 0.5rem 0 1rem;

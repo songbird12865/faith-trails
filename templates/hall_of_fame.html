@@ -28,6 +28,8 @@
 </div>
 
 <div class="overflow-x-auto">
+  <!-- Rows are quests and columns are difficulty levels. Horizontal scrolling
+       preserves this comparison on narrow screens. -->
   <table class="w-full max-w-2xl mx-auto border-separate" style="border-spacing: 0.75rem;">
     <thead>
       <tr>
@@ -50,6 +52,7 @@
             {% set earned_at = earned.get((q['id'], level)) %}
             <td class="text-center align-middle">
               {% if earned_at %}
+                {# Halo colors reinforce the difficulty column visually. #}
                 {% if level == 'easy' %}
                   {% set halo = '#B08D57' %}
                 {% elif level == 'medium' %}

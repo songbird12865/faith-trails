@@ -1,24 +1,35 @@
 (() => {
+  // Flask embeds the signed-in profile, quest catalog, and earned badge IDs as
+  // JSON. The single-page game shell uses this bootstrap data immediately and
+  // requests fresh quest/progress details from the API when needed.
   const boot=JSON.parse(document.getElementById('game-bootstrap').textContent);
   const mapView=document.getElementById('map-view'),questView=document.getElementById('quest-view');
   const state={earned:new Set(boot.earned),quest:null,scenes:[],current:0,lesson:'',lessonNarration:null,narration:null,championKnown:false,championJustUnlocked:false};
+  // Escape all server-provided or player-provided text before inserting it into
+  // HTML templates. This prevents names and content from becoming executable.
   const esc=s=>String(s??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
   const img=slug=>`/static/img/quests/${slug}.jpg`;
   const button=(label,fn,kind='primary-button')=>{const b=document.createElement('button');b.className=kind;b.textContent=label;b.onclick=fn;return b};
   const toast=msg=>{const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1800)};
 
   function transition(from,to,render){from.classList.add('is-leaving');setTimeout(()=>{from.hidden=true;from.classList.remove('is-leaving');render();to.hidden=false;to.style.animation='none';void to.offsetWidth;to.style.animation='';scrollTo({top:0,behavior:'smooth'})},260)}
+
+  // ----- Trail map and saved-progress views -----
   function renderMap(){
     history.replaceState({view:'map'},'', '/');
     mapView.innerHTML=`<div class="hero trail-map-heading"><div class="hero-kicker">${esc(boot.profile.current_difficulty)} adventure</div><h1>Your Faith Trail</h1><p>Follow the winding path, choose a Bible adventure, and collect every badge!</p><div class="choice-grid" id="difficulty-picker"></div></div><div class="faith-trail-map" id="faith-trail-map"><div class="trail-forest-glow" aria-hidden="true"></div><svg class="journey-svg" id="journey-svg" aria-hidden="true"><path id="journey-shadow"></path><path id="journey-line"></path></svg><div class="trail-stops">${boot.quests.map((q,i)=>`<div class="trail-stop trail-stop--${i%2?'right':'left'}" style="--stop-delay:${.45+i*.16}s"><button class="adventure-stop ${q.is_available?'':'locked'} ${state.earned.has(q.id)?'earned':''}" data-slug="${esc(q.slug)}" aria-label="${esc(q.title)}${q.is_available?'':' — coming soon'}"><span class="stop-ring"><img src="${img(q.slug)}" alt=""><span class="stop-number">${q.sort_order}</span>${state.earned.has(q.id)?'<span class="stop-earned" aria-label="Badge earned">✓</span>':''}${q.is_available?'':'<span class="stop-lock">🔒</span>'}</span><span class="stop-sign"><strong>${esc(q.title)}</strong><small>${esc(q.summary)}</small></span></button></div>`).join('')}</div><div class="trail-finish" aria-hidden="true">🏁</div></div>`;
     const picker=mapView.querySelector('#difficulty-picker');
     boot.difficulties.forEach(level=>{const b=button(level,()=>changeDifficulty(level),'game-choice');if(level===boot.profile.current_difficulty)b.classList.add('correct');picker.appendChild(b)});
     mapView.querySelectorAll('.adventure-stop').forEach(tile=>tile.onclick=()=>{const q=boot.quests.find(x=>x.slug===tile.dataset.slug);q.is_available?openQuest(q.slug):toast('This adventure is coming soon!')});
+    // Wait for two paint cycles so the quest markers have measurable positions
+    // before calculating the responsive SVG trail between them.
     requestAnimationFrame(()=>requestAnimationFrame(drawFaithTrail));
     fetch('/api/progress').then(r=>r.ok?r.json():null).then(data=>{if(data&&data.earned&&data.earned.length>=18){state.championKnown=true;const trail=mapView.querySelector('.faith-trail-map');trail?.classList.add('champion-golden');if(trail&&!trail.querySelector('.champion-map-button')){const b=button('🏆 Grand Champion Celebration',renderChampion,'primary-button champion-map-button');trail.appendChild(b)}drawFaithTrail();}}).catch(()=>{});
   }
 
   function drawFaithTrail(){
+    // Build a curved SVG path through the actual on-screen marker centers.
+    // Recalculating from DOM geometry keeps the path aligned at every viewport.
     const map=document.getElementById('faith-trail-map'),svg=document.getElementById('journey-svg');
     const line=document.getElementById('journey-line'),shadow=document.getElementById('journey-shadow');
     if(!map||!svg||!line||!shadow)return;
@@ -33,12 +44,16 @@
     line.getBoundingClientRect();line.classList.remove('drawn');requestAnimationFrame(()=>line.classList.add('drawn'));
   }
   async function renderCollection(kind){
+    // One progress response powers both views: the badge case filters to the
+    // current level, while Hall of Fame summarizes all three difficulties.
     const r=await fetch('/api/progress');if(!r.ok)return toast('Progress could not be loaded.');const data=await r.json();
     const title=kind==='badges'?'My Badge Collection':'Hall of Fame';
     mapView.innerHTML=`<div class="hero"><div class="hero-kicker">${esc(boot.profile.name)}’s achievements</div><h1>${title}</h1><p>${kind==='badges'?'Every completed trail adds another badge to your collection.':'Badges earned across Easy, Medium, and Hard adventures.'}</p><button id="collection-back" class="primary-button">← Back to Trail</button></div><div class="map-grid"></div>`;
     const grid=mapView.querySelector('.map-grid');data.quests.filter(q=>q.is_available).forEach((q,i)=>{const levels=data.earned.filter(e=>e.quest_id===q.id).map(e=>e.difficulty);const earned=kind==='badges'?levels.includes(boot.profile.current_difficulty):levels.length>0;const el=document.createElement('article');el.className='quest-tile';el.style.animationDelay=`${i*.08}s`;el.innerHTML=`${earned?'<span class="earned-check">✓</span>':''}<img src="${img(q.slug)}" alt=""><div class="tile-copy"><h2>${esc(q.title)}</h2><p>${kind==='badges'?(earned?`${esc(boot.profile.current_difficulty)} badge earned`:'Complete this trail to earn it'):`${['easy','medium','hard'].map(x=>levels.includes(x)?'★':'☆').join(' ')} ${levels.length}/3 levels`}</p></div>`;grid.appendChild(el)});mapView.querySelector('#collection-back').onclick=renderMap;
   }
   async function changeDifficulty(level){if(level===boot.profile.current_difficulty)return;const r=await fetch('/api/profile',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({difficulty:level})});if(r.ok)location.reload();else toast('Could not change difficulty.')}
+
+  // ----- Quest loading and scene dispatch -----
   async function openQuest(slug,push=true){
     questView.innerHTML='<div class="hero"><div class="scene-emoji">🧭</div><h1>Loading your adventure…</h1></div>';
     transition(mapView,questView,()=>{});
@@ -54,6 +69,8 @@
     content.innerHTML='';controls.innerHTML='';document.getElementById('progress-fill').style.width=`${Math.min(100,(state.current/(state.scenes.length||1))*100)}%`;
     if(state.current>=state.scenes.length)return completeQuest();
     const s=state.scenes[state.current];playNarration(s.narration_file,s._narration_text||s.text||s.prompt||s.verse);
+    // Scene data controls the renderer, allowing new quests to reuse the same
+    // front-end engine instead of requiring a separate page for each story.
     if(s.type==='story')renderStory(s,content,controls);else if(s.type==='quiz')renderQuiz(s,content);else if(s.type==='memory_verse')renderVerse(s,content,controls);else if(s.subtype==='matching')renderMatching(s,content,controls);else if(s.subtype==='color_picker')renderColors(s,content,controls);else if(s.subtype==='sequence')renderSequence(s,content,controls);
   }
   function renderStory(s,c,k){c.innerHTML=`<div class="scene-emoji">${s.emoji||'✨'}</div><h2 class="scene-title">${esc(state.quest.title)}</h2><p class="scene-text">${esc(s.text)}</p>`;k.appendChild(button('Continue →',advance))}
@@ -62,16 +79,22 @@
   function renderColors(s,c,k){const colors=Array(s.target_count).fill(null);const draw=()=>{c.innerHTML=`<div class="scene-emoji">🎨</div><h2 class="scene-title">${esc(s.prompt)}</h2><div class="coat">${colors.map(x=>`<div class="coat-stripe" style="background:${x||'#efe6d0'}"></div>`).join('')}</div><div class="choice-grid palette"></div>`;s.palette.forEach(col=>{const b=button(col.name,()=>{const n=colors.indexOf(null);if(n<0)return;colors[n]=col.hex;draw();if(!colors.includes(null)){k.innerHTML='';k.appendChild(button('Beautiful! Continue →',advance))}},'game-choice');b.style.borderColor=col.hex;b.style.background=col.hex;b.style.color='#fff';c.querySelector('.palette').appendChild(b)})};draw()}
   function renderSequence(s,c,k){let tray=[...s.items].sort(()=>Math.random()-.5),built=[];const draw=()=>{c.innerHTML=`<div class="scene-emoji">🧩</div><h2 class="scene-title">${esc(s.prompt)}</h2><div class="assembly-line"></div><div class="item-tray"></div><p class="feedback"></p>`;built.forEach((x,i)=>c.querySelector('.assembly-line').appendChild(button(`${i+1}. ${x.emoji} ${x.label}`,()=>{built= built.filter(y=>y.id!==x.id);tray.push(x);draw()},'word-chip')));tray.forEach(x=>c.querySelector('.item-tray').appendChild(button(`${x.emoji} ${x.label}`,()=>{built.push(x);tray=tray.filter(y=>y.id!==x.id);draw();if(!tray.length)check()},'game-item')))};const check=()=>{const ok=built.every((x,i)=>x.id===s.items[i].id),f=c.querySelector('.feedback');f.textContent=ok?'Perfect order! ✨':'Not quite. Tap a placed item to move it back.';f.className=`feedback ${ok?'good':'retry'}`;if(ok)k.appendChild(button('Continue →',advance))};draw()}
   function renderVerse(s,c,k){
+    // Preserve duplicate words by assigning each word a unique numeric ID;
+    // comparing only word text would remove every matching occurrence at once.
     const words=s.verse.split(' ').map((word,id)=>({word,id}));let tray=[],built=[];
     const learn=()=>{c.innerHTML=`<div class="scene-emoji">📖</div><h2 class="scene-title">Memory Verse</h2><p class="scene-text">“${esc(s.verse)}”</p><p><strong>${esc(s.reference)}</strong></p>`;k.innerHTML='';k.appendChild(button('Build the verse →',build))};
     const build=()=>{stopNarration();tray=[...words].sort(()=>Math.random()-.5);built=[];draw()};
     const draw=()=>{c.innerHTML='<h2 class="scene-title">Tap the words in order</h2><p class="scene-text">The numbers show the sentence order. Tap a placed word to move it back.</p><div class="assembly-line"></div><div class="item-tray"></div><p class="feedback"></p>';built.forEach((x,i)=>c.querySelector('.assembly-line').appendChild(button(`${i+1}. ${x.word}`,()=>{built=built.filter(y=>y.id!==x.id);tray.push(x);draw()},'word-chip')));tray.forEach(x=>c.querySelector('.item-tray').appendChild(button(x.word,()=>{built.push(x);tray=tray.filter(y=>y.id!==x.id);draw();if(!tray.length)check()},'word-chip')))};
+    // Ignore punctuation and repeated whitespace when checking the child's
+    // reconstruction, because the learning goal is correct word order.
     const normalize=text=>text.toLowerCase().replace(/[^a-z0-9\s]/g,'').replace(/\s+/g,' ').trim();
     const check=()=>{const assembled=normalize(built.map(x=>x.word).join(' ')),expected=normalize(s.verse),ok=assembled===expected,f=c.querySelector('.feedback');f.textContent=ok?'You built it! ✨':'The words are all here, but their order is not quite right. Tap a word to move it back.';f.className=`feedback ${ok?'good':'retry'}`;if(ok){k.innerHTML='';k.appendChild(button('Choose its Bible reference →',reference))}};
     const reference=()=>{c.innerHTML='<div class="scene-emoji">📍</div><h2 class="scene-title">Where is this verse found?</h2><div class="choice-grid"></div><p class="feedback"></p>';[...s.reference_options].sort(()=>Math.random()-.5).forEach(x=>{c.querySelector('.choice-grid').appendChild(button(x,()=>{const f=c.querySelector('.feedback');if(x===s.reference){f.textContent='Correct! ✨';f.className='feedback good';setTimeout(advance,700)}else{f.textContent='Try another reference.';f.className='feedback retry'}},'game-choice'))})};
     learn();
   }
   function speakWithDevice(text){if(!text||!('speechSynthesis' in window))return;const u=new SpeechSynthesisUtterance(text);u.rate=.9;u.pitch=1.08;u.onstart=()=>window.FaithTrailsAudio?.duck();u.onend=()=>window.FaithTrailsAudio?.unduck();u.onerror=()=>window.FaithTrailsAudio?.unduck();state.narration=u;window.speechSynthesis.speak(u)}
+  // Use cached narration when available; device speech is a graceful fallback
+  // if an MP3 cannot load or the narration service is not configured.
   function playNarration(file,text){stopNarration();if(!file)return speakWithDevice(text);const a=new Audio(`/api/narration/${encodeURIComponent(file)}`);state.narration=a;let fallbackUsed=false;a.addEventListener('play',()=>window.FaithTrailsAudio?.duck());a.addEventListener('ended',()=>window.FaithTrailsAudio?.unduck());a.addEventListener('error',()=>{if(fallbackUsed)return;fallbackUsed=true;state.narration=null;speakWithDevice(text)});a.play().catch(()=>{if(!fallbackUsed){fallbackUsed=true;state.narration=null;speakWithDevice(text)}})}
   function stopNarration(){if(state.narration instanceof Audio)state.narration.pause();if('speechSynthesis' in window)window.speechSynthesis.cancel();state.narration=null;window.FaithTrailsAudio?.unduck()}
   async function completeQuest(){
@@ -79,6 +102,8 @@
     await fetch(`/api/complete/${state.quest.slug}`,{method:'POST'}).catch(()=>{});
     state.earned.add(state.quest.id);
     const progress=await fetch('/api/progress').then(r=>r.ok?r.json():null).catch(()=>null);
+    // Champion status is based on persisted server data rather than local state,
+    // so refreshing or switching devices cannot create a false unlock.
     const nowChampion=Boolean(progress&&progress.earned&&progress.earned.length>=18);
     state.championJustUnlocked=nowChampion&&!state.championKnown;
     state.championKnown=nowChampion;
@@ -88,6 +113,8 @@
   document.getElementById('celebration-continue').onclick=()=>{const o=document.getElementById('badge-overlay');o.classList.remove('open');o.setAttribute('aria-hidden','true');if(state.championJustUnlocked){state.championJustUnlocked=false;transition(questView,mapView,renderChampion)}else{window.FaithTrailsAudio?.gameplay();showMap()}};
 
   function renderChampion(){
+    // This reward is unlocked only after all six quests are completed at all
+    // three difficulty levels (6 quests × 3 levels = 18 badges).
     history.replaceState({view:'champion'},'', '/');
     window.FaithTrailsAudio?.celebrate();
     mapView.innerHTML=`<section class="grand-champion-screen"><canvas id="grand-confetti"></canvas><div class="golden-trail-intro" id="golden-trail-intro"><p class="champion-kicker">ALL 18 BADGES EARNED</p><h1>Your Whole Faith Trail Is Turning Gold!</h1><svg viewBox="0 0 700 230" aria-hidden="true"><path id="grand-trail-shadow" d="M40 45 C170 5 190 100 335 55 S545 15 655 70 C565 125 440 90 340 150 S145 215 45 165"/><path id="grand-trail-line" d="M40 45 C170 5 190 100 335 55 S545 15 655 70 C565 125 440 90 340 150 S145 215 45 165"/></svg><div class="grand-mini-badges">${Array.from({length:18},(_,i)=>`<span style="--badge-delay:${.45+i*.08}s">${['🌧️','🧥','🌊','🪨','🐋','🦁'][i%6]}</span>`).join('')}</div></div><div class="champion-final-card" id="champion-final-card" hidden><div class="grand-trophy">🏆</div><p class="champion-kicker">YOU DID IT!</p><h1>Faith-Trails Champion</h1><h2>All 18 badges earned!</h2><p class="champion-inscription">You have learned that God is Faithful through every journey!</p><div class="champion-message"><button id="hear-champion" class="champion-sound-button">🔊 Hear Your Champion Message</button><p>You followed Noah, Joseph, Moses, David, Jonah, and Daniel through every adventure. Each one trusted God in a different way—and now you know that you can trust Him too.</p><blockquote>“Trust in the Lord with all your heart.”<br><strong>— Proverbs 3:5</strong></blockquote></div><p class="champion-traits">You showed courage like David, faithfulness like Daniel, obedience like Jonah, trust like Joseph, bravery like Moses, and perseverance like Noah.</p><div class="champion-actions"><button id="view-certificate" class="primary-button">📜 My Certificate</button><button id="design-badge" class="primary-button">🎨 Secret Badge Designer</button><button id="champion-home" class="primary-button champion-quiet">Return to My Golden Trail</button></div></div></section>`;
@@ -114,6 +141,8 @@
   function confetti(){const c=document.getElementById('confetti-canvas'),x=c.getContext('2d');c.width=innerWidth;c.height=innerHeight;let p=Array.from({length:100},()=>({x:Math.random()*c.width,y:-Math.random()*c.height,s:4+Math.random()*8,v:2+Math.random()*4,d:Math.random()*2-1,h:Math.random()*360})),n=0;function go(){x.clearRect(0,0,c.width,c.height);p.forEach(q=>{q.y+=q.v;q.x+=q.d;x.fillStyle=`hsl(${q.h} 80% 55%)`;x.fillRect(q.x,q.y,q.s,q.s*.6)});if(n++<420&&document.getElementById('badge-overlay').classList.contains('open'))requestAnimationFrame(go)}go()}
   document.querySelectorAll('[data-game-home]').forEach(b=>b.onclick=e=>{e.preventDefault();if(!questView.hidden)showMap();else renderMap()});window.onpopstate=e=>{if(e.state?.view==='quest')openQuest(e.state.slug,false);else if(!questView.hidden)transition(questView,mapView,renderMap)};
   document.querySelectorAll('[data-game-screen]').forEach(a=>a.onclick=e=>{e.preventDefault();if(!questView.hidden){transition(questView,mapView,()=>renderCollection(a.dataset.gameScreen))}else renderCollection(a.dataset.gameScreen)});
+  // Debounce resize events so the SVG trail is recalculated once after the
+  // viewport settles instead of on every pixel of a resize gesture.
   let trailResizeTimer;window.addEventListener('resize',()=>{clearTimeout(trailResizeTimer);trailResizeTimer=setTimeout(drawFaithTrail,120)});
   renderMap();if(boot.initialQuest)openQuest(boot.initialQuest,false);
 })();

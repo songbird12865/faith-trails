@@ -15,6 +15,7 @@
 </p>
 
 <div class="w-full max-w-xs mx-auto bg-trailgreen/15 rounded-full h-3 mb-10 overflow-hidden">
+  {# Guard against division by zero while quest seed data is unavailable. #}
   <div class="bg-trailgreen h-full rounded-full transition-all duration-500"
        style="width: {{ ((earned|length / quests|length * 100) if quests|length else 0) | round(1) }}%"></div>
 </div>
@@ -24,6 +25,7 @@
 {% else %}
   <div class="grid grid-cols-2 sm:grid-cols-3 gap-y-8 gap-x-4 justify-items-center">
     {% for q in quests %}
+      {# earned contains timestamps for the player's active difficulty only. #}
       {% set earned_at = earned.get(q['id']) %}
       <div class="flex flex-col items-center text-center max-w-[160px]">
         <span class="trail-marker-circle {{ 'trail-marker-earned' if earned_at else 'trail-marker-locked' }}"

@@ -2,11 +2,14 @@
 {% block title %}Adventure Map{% endblock %}
 {% block content %}
 <div id="game-shell" class="game-shell">
+  <!-- Both views stay in one document so transitions and background audio are
+       uninterrupted. game.js toggles which section is hidden. -->
   <section id="map-view" class="game-view"></section>
   <section id="quest-view" class="game-view" hidden></section>
   <div id="toast" class="game-toast" aria-live="polite"></div>
 </div>
 <div id="badge-overlay" class="badge-overlay" aria-hidden="true">
+  <!-- Reused for ordinary quest badges; the 18-badge reward is a full view. -->
   <canvas id="confetti-canvas"></canvas>
   <div class="celebration-card">
     <div id="celebration-badge" class="celebration-badge">🏅</div>
@@ -14,6 +17,7 @@
     <button id="celebration-continue" class="primary-button">Return to the Trail</button>
   </div>
 </div>
+<!-- tojson safely serializes server state for the single-page front end. -->
 <script id="game-bootstrap" type="application/json">{{ {'quests': quests, 'earned': earned, 'profile': {'id': profile['id'], 'name': profile['name'], 'current_difficulty': profile['current_difficulty']}, 'difficulties': difficulties, 'initialQuest': initial_quest}|tojson }}</script>
 {% endblock %}
 {% block scripts %}<script src="{{ url_for('static',filename='js/game.js') }}"></script>{% endblock %}

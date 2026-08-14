@@ -1,6 +1,7 @@
 /* Faith Trails custom styling
-   Tailwind (via CDN) handles most utility styling; this file holds the
-   hand-built "adventure map" visual — the signature element of the home page. */
+   Tailwind (via CDN) handles utility styling. This file contains the custom
+   trail, permanent game shell, activities, rewards, responsive rules, print
+   output, and reduced-motion accessibility behavior. */
 
 .trail-path {
   position: relative;
@@ -203,4 +204,5 @@
 @keyframes grandTrailDraw{to{stroke-dashoffset:0}}@keyframes grandBadgeBurst{to{opacity:1;transform:scale(1)}}@keyframes grandFloat{50%{transform:translateY(-9px) rotate(3deg)}}
 @media(max-width:650px){.designer-grid{grid-template-columns:1fr}.certificate-toolbar{flex-direction:column}.champion-actions{flex-direction:column}.champion-actions .primary-button{width:100%}.grand-champion-screen{border-radius:1rem}.grand-mini-badges{gap:.22rem}}
 @media print{.app-header,.certificate-toolbar{display:none!important}body{background:#fff!important}.game-shell{width:100%!important;padding:0!important}.faith-certificate{min-height:96vh;display:grid;place-items:center;box-shadow:none}.certificate-inner{width:100%}}
+/* Preserve the interface while minimizing motion for users who request it. */
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important}}

@@ -55,6 +55,7 @@ VOICE_SETTINGS = {
 
 
 def generate_audio(text, out_path):
+    """Request one MP3 from ElevenLabs and write it to the cache path."""
     url = f"https://api.elevenlabs.io/v1/text-to-speech/{VOICE_ID}"
     headers = {
         "xi-api-key": API_KEY,
@@ -66,6 +67,7 @@ def generate_audio(text, out_path):
         "voice_settings": VOICE_SETTINGS
     }
 
+    # A request is made only for content whose hash-based output file is absent.
     response = requests.post(url, json=payload, headers=headers)
 
     if response.status_code != 200:
@@ -79,6 +81,7 @@ def generate_audio(text, out_path):
 
 
 def main():
+    """Generate only missing narration files and report cache usage."""
     if not API_KEY:
         print("ELEVENLABS_API_KEY environment variable is not set. Stopping.")
         return
@@ -94,6 +97,8 @@ def main():
     for item in NARRATION_INDEX:
         out_path = os.path.join(OUTPUT_DIR, item["filename"])
 
+        # Hashes in filenames make an existing file safe to reuse: if narration
+        # text changes, its hash and therefore its output filename also change.
         if os.path.exists(out_path):
             skipped += 1
             continue

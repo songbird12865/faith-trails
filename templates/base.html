@@ -13,12 +13,16 @@
   {% block head %}{% endblock %}
 </head>
 <body class="bg-parchment text-inkbrown font-body min-h-screen">
+  <!-- Audio elements live in the base template so music can continue while the
+       JavaScript game shell changes views without replacing the page. -->
   <audio id="gameplay-music" loop preload="auto"><source src="{{ url_for('static',filename='music/gameplay_theme.mp3') }}" type="audio/mpeg"></audio>
   <audio id="celebration-music" loop preload="auto"><source src="{{ url_for('static',filename='music/celebration_theme.mp3') }}" type="audio/mpeg"></audio>
+  <!-- A deliberate user gesture is required to unlock audio on mobile browsers. -->
   <div id="audio-gate" class="audio-gate" role="dialog" aria-modal="true">
     <div class="audio-gate-shade" aria-hidden="true"></div>
     <div class="audio-gate-card"><div class="gate-compass">🧭</div><h1>Faith Trails</h1><p>A Closer Walk for Kids</p><button id="start-adventure">Start Adventure</button></div>
   </div>
+  <!-- Persistent navigation shared by maps, quests, collections, and rewards. -->
   <header class="app-header">
     <a href="{{ url_for('home') }}" class="brand-button" data-game-home><span>🧭</span> Faith Trails</a>
     <div class="header-actions">

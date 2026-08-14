@@ -7,6 +7,8 @@ if not database_path.exists():
     raise SystemExit("faith_trails.db was not found. Put this file in the Faith-Trails project folder and run it again.")
 
 with sqlite3.connect(database_path) as database:
+    # Limit the update to known quest slugs. Existing users, badges, and all
+    # unrelated quest rows remain unchanged.
     database.execute(
         """UPDATE quests SET is_available = 1
            WHERE slug IN ('david-goliath', 'jonah-big-fish', 'daniel-lions-den')"""
