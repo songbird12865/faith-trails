@@ -1,4 +1,5 @@
 (() => {
+  function init(){
   // Flask embeds the signed-in profile, quest catalog, and earned badge IDs as
   // JSON. The single-page game shell uses this bootstrap data immediately and
   // requests fresh quest/progress details from the API when needed.
@@ -156,6 +157,13 @@
   document.querySelectorAll('[data-game-screen]').forEach(a=>a.onclick=e=>{e.preventDefault();if(!questView.hidden){transition(questView,mapView,()=>renderCollection(a.dataset.gameScreen))}else renderCollection(a.dataset.gameScreen)});
   // Debounce resize events so the SVG trail is recalculated once after the
   // viewport settles instead of on every pixel of a resize gesture.
-  let trailResizeTimer;window.addEventListener('resize',()=>{clearTimeout(trailResizeTimer);trailResizeTimer=setTimeout(drawFaithTrail,120)});
+  if(window.__faithTrailsResizeHandler)window.removeEventListener('resize',window.__faithTrailsResizeHandler);
+  let trailResizeTimer;window.__faithTrailsResizeHandler=()=>{clearTimeout(trailResizeTimer);trailResizeTimer=setTimeout(drawFaithTrail,120)};window.addEventListener('resize',window.__faithTrailsResizeHandler);
   renderMap();if(boot.initialQuest)openQuest(boot.initialQuest,false);
+  }
+  // Exposed so players.html can re-run the whole game shell after swapping in
+  // fresh page content without a full reload (which would otherwise tear down
+  // the AudioContext and re-trigger the mobile audio-gate).
+  window.FaithTrailsGame={init};
+  init();
 })();
