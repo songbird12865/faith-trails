@@ -34,7 +34,11 @@
       <button id="music-toggle" class="round-control" aria-label="Turn music off">♫</button>
       <a href="{{ url_for('badges') }}" class="round-control" data-game-screen="badges" aria-label="My badges">🏅</a>
       <a href="{{ url_for('hall_of_fame') }}" class="round-control" data-game-screen="hall" aria-label="Hall of Fame">🏆</a>
-      {% if profile %}<a href="{{ url_for('logout') }}" class="round-control" aria-label="Switch player">↻</a>{% endif %}
+      {% if profile %}
+      <a href="{{ url_for('logout') }}"
+         class="inline-flex items-center justify-center rounded-full border border-white/30 bg-white/10 px-3 py-2 text-sm font-extrabold text-white no-underline transition hover:-translate-y-0.5 hover:bg-white/20"
+         aria-label="Change player">Change Player</a>
+      {% endif %}
     </div>
   </header>
   <main id="app-main">{% block content %}{% endblock %}</main>
