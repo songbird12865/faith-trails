@@ -65,7 +65,25 @@
     }
     mapView.querySelector('#collection-back').onclick=renderMap;
   }
-  async function changeDifficulty(level){if(level===boot.profile.current_difficulty)return;const r=await fetch('/api/profile',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({difficulty:level})});if(r.ok)location.reload();else toast('Could not change difficulty.')}
+  async function changeDifficulty(level){
+    if(level===boot.profile.current_difficulty)return;
+    const r=await fetch('/api/profile',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({difficulty:level})});
+    if(!r.ok)return toast('Could not change difficulty.');
+
+    // Stay inside the single-page game. A full location.reload() rebuilds the
+    // audio gate and makes the player feel as if the game restarted.
+    boot.profile.current_difficulty=level;
+    try{
+      const progressResponse=await fetch('/api/progress');
+      if(progressResponse.ok){
+        const progress=await progressResponse.json();
+        state.earned=new Set(progress.earned.filter(e=>e.difficulty===level).map(e=>e.quest_id));
+        state.championKnown=progress.earned.length>=18;
+      }
+    }catch(e){}
+    renderMap();
+    toast(`${level.charAt(0).toUpperCase()+level.slice(1)} adventure selected!`);
+  }
 
   // ----- Quest loading and scene dispatch -----
   async function openQuest(slug,push=true){
