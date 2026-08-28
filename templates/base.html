@@ -17,10 +17,7 @@
        JavaScript game shell changes views without replacing the page. -->
   <audio id="gameplay-music" loop preload="auto"><source src="{{ url_for('static',filename='music/gameplay_theme.mp3') }}" type="audio/mpeg"></audio>
   <audio id="celebration-music" loop preload="auto"><source src="{{ url_for('static',filename='music/celebration_theme.mp3') }}" type="audio/mpeg"></audio>
-  <!-- The audio gate belongs to an active game session only. Keeping it off the
-       player-selection/new-player screens prevents switching players from looking
-       like the entire game restarted. -->
-  {% if profile %}
+  <!-- A deliberate user gesture is required to unlock audio on mobile browsers. -->
   <div id="audio-gate" class="audio-gate" role="dialog" aria-modal="true">
     <div class="audio-gate-shade" aria-hidden="true"></div>
     <div class="audio-gate-card"><div class="gate-compass">🧭</div><h1>Faith Trails</h1><p>A Closer Walk for Kids</p><button id="start-adventure">Start Adventure</button></div>
@@ -29,20 +26,15 @@
       <a href="https://www.fiftysounds.com/" target="_blank" rel="noopener noreferrer">www.fiftysounds.com</a>
     </p>
   </div>
-  {% endif %}
   <!-- Persistent navigation shared by maps, quests, collections, and rewards. -->
   <header class="app-header">
     <a href="{{ url_for('home') }}" class="brand-button" data-game-home><span>🧭</span> Faith Trails</a>
     <div class="header-actions">
-      {% if profile %}
-      <div class="player-status">
-        <span class="player-chip">Explorer: {{ profile['name'] }}</span>
-        <a href="{{ url_for('logout') }}" class="change-player-link" aria-label="Change player">Change Player</a>
-      </div>
-      {% endif %}
+      {% if profile %}<span class="player-chip">Explorer: {{ profile['name'] }}</span>{% endif %}
       <button id="music-toggle" class="round-control" aria-label="Turn music off">♫</button>
       <a href="{{ url_for('badges') }}" class="round-control" data-game-screen="badges" aria-label="My badges">🏅</a>
       <a href="{{ url_for('hall_of_fame') }}" class="round-control" data-game-screen="hall" aria-label="Hall of Fame">🏆</a>
+      {% if profile %}<a href="{{ url_for('logout') }}" class="round-control" aria-label="Switch player">↻</a>{% endif %}
     </div>
   </header>
   <main id="app-main">{% block content %}{% endblock %}</main>
