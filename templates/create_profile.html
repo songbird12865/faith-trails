@@ -44,57 +44,5 @@
   <p id="create-feedback" class="text-sm font-700 mt-3 min-h-[1.25rem] text-trailgold"></p>
 </div>
 
-<script>
-  // Difficulty is selected with buttons, so retain it in local state until the
-  // name and level can be submitted to the profile API together.
-  let selectedDifficulty = null;
-  const difficultyButtons = document.querySelectorAll('.difficulty-option');
-
-  difficultyButtons.forEach(btn => {
-    btn.addEventListener('click', () => {
-      selectedDifficulty = btn.dataset.difficulty;
-      difficultyButtons.forEach(b => {
-        b.classList.remove('bg-trailgreen', 'text-parchment', 'border-trailgreen');
-        b.classList.add('bg-white');
-      });
-      btn.classList.remove('bg-white');
-      btn.classList.add('bg-trailgreen', 'text-parchment', 'border-trailgreen');
-    });
-  });
-
-  document.getElementById('create-profile-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const input = document.getElementById('name-input');
-    const feedback = document.getElementById('create-feedback');
-    const name = input.value.trim();
-
-    if (!name) {
-      feedback.textContent = 'Please type a name first!';
-      return;
-    }
-    if (!selectedDifficulty) {
-      feedback.textContent = 'Please pick a difficulty level first!';
-      return;
-    }
-
-    // A successful API response also establishes the Flask session before the
-    // browser moves to the signed-in trail map.
-    try {
-      const res = await fetch('/api/profile', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, difficulty: selectedDifficulty }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        window.location.href = "{{ url_for('home') }}";
-      } else {
-        feedback.textContent = 'Something went wrong — please try again.';
-      }
-    } catch (err) {
-      feedback.textContent = 'Something went wrong — please try again.';
-    }
-  });
-</script>
 
 {% endblock %}

@@ -22,6 +22,7 @@
     {% endfor %}
 
     <a href="{{ url_for('new_player') }}"
+       data-new-player
        class="flex flex-col items-center justify-center gap-2 rounded-2xl bg-amber-50
               border-2 border-dashed border-amber-300 hover:bg-amber-100 transition p-6">
       <span class="text-4xl">➕</span>
@@ -34,62 +35,4 @@
   {% endif %}
 </div>
 
-<script>
-  // Player selection normally does a full page navigation, which tears down
-  // the AudioContext created when "Start Adventure" was tapped and forces the
-  // audio-gate to reappear on the next page (mobile browsers won't resume
-  // audio outside a direct tap). To keep the music session alive, we fetch
-  // the destination page instead of navigating to it, then splice its
-  // #app-main content and header into the current document.
-  document.querySelectorAll('[data-player-select]').forEach(link => {
-    link.addEventListener('click', async (e) => {
-      e.preventDefault();
-      const url = link.getAttribute('href');
-
-      try {
-        const res = await fetch(url, { credentials: 'same-origin' });
-        if (!res.ok) throw new Error('select_player failed');
-        const html = await res.text();
-        const doc = new DOMParser().parseFromString(html, 'text/html');
-
-        const newMain = doc.getElementById('app-main');
-        const newHeaderActions = doc.querySelector('.header-actions');
-        const currentMain = document.getElementById('app-main');
-        const currentHeaderActions = document.querySelector('.header-actions');
-
-        if (!newMain) throw new Error('no #app-main in response');
-
-        // Swap header (adds the player chip / badges / hall-of-fame links).
-        if (newHeaderActions && currentHeaderActions) {
-          currentHeaderActions.innerHTML = newHeaderActions.innerHTML;
-        }
-
-        // Swap main content.
-        currentMain.innerHTML = newMain.innerHTML;
-        document.title = doc.title;
-        history.pushState({}, '', res.url);
-
-        // game.js normally loads via a <script> tag inside game.html's own
-        // page, which we never touch (we only swapped #app-main). If it's
-        // already loaded from an earlier switch, just re-run its init hook
-        // against the freshly-swapped bootstrap data. If not, load it now and
-        // let it run its own first-time init once ready.
-        if (window.FaithTrailsGame && typeof window.FaithTrailsGame.init === 'function') {
-          window.FaithTrailsGame.init();
-        } else {
-          const gameScriptSrc = doc.querySelector('script[src*="game.js"]')?.getAttribute('src');
-          if (!gameScriptSrc) { window.location.href = res.url; return; }
-          const script = document.createElement('script');
-          script.src = gameScriptSrc;
-          script.onerror = () => { window.location.href = res.url; };
-          document.body.appendChild(script);
-        }
-      } catch (err) {
-        // Any failure (network, parsing, missing hook) falls back to a
-        // normal navigation so player selection never silently breaks.
-        window.location.href = url;
-      }
-    });
-  });
-</script>
 {% endblock %}
