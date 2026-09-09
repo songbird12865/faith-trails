@@ -1,11 +1,15 @@
-{% extends "base.html" %}
-{% block title %}My Badges{% endblock %}
+{% extends "base.html" %}   {# Use the shared base template for this page. #}
+{% block title %}My Badges{% endblock %}   {# Set the title shown in the browser tab. #}
 
 {% block content %}
+
+<!-- This link returns the player to the main adventure trail. -->
 
 <a href="{{ url_for('home') }}" class="inline-flex items-center gap-1 text-trailgreen font-700 mb-6 hover:text-trailsky transition-colors">
   &larr; Back to Trail Map
 </a>
+
+<!-- This heading and count identify the player and summarize progress. -->
 
 <h1 class="font-display text-3xl sm:text-4xl font-800 text-trailgreendark text-center mb-2">
   {{ profile['name'] }}'s Badges
@@ -14,18 +18,24 @@
   {{ earned|length }} of {{ quests|length }} badge{{ 's' if quests|length != 1 }} earned
 </p>
 
+<!-- This progress bar shows how many badges the player has earned. -->
+
 <div class="w-full max-w-xs mx-auto bg-trailgreen/15 rounded-full h-3 mb-10 overflow-hidden">
-  {# Guard against division by zero while quest seed data is unavailable. #}
+  {# Use zero when no quests exist so the calculation remains safe. #}
   <div class="bg-trailgreen h-full rounded-full transition-all duration-500"
        style="width: {{ ((earned|length / quests|length * 100) if quests|length else 0) | round(1) }}%"></div>
 </div>
 
 {% if quests|length == 0 %}
+  {# Show a friendly message if the database has no available quests. #}
   <p class="text-center text-inkbrown/60 font-600">No quests are available yet. Check back soon!</p>
 {% else %}
+
+  <!-- This grid displays one badge space for every available quest. -->
+
   <div class="grid grid-cols-2 sm:grid-cols-3 gap-y-8 gap-x-4 justify-items-center">
     {% for q in quests %}
-      {# earned contains timestamps for the player's active difficulty only. #}
+      {# Look for a saved badge at the player's current difficulty. #}
       {% set earned_at = earned.get(q['id']) %}
       <div class="flex flex-col items-center text-center max-w-[160px]">
         <span class="trail-marker-circle {{ 'trail-marker-earned' if earned_at else 'trail-marker-locked' }}"
@@ -33,13 +43,16 @@
           <img src="{{ url_for('static', filename='img/quests/' ~ q['slug'] ~ '.jpg') }}"
                alt="" class="trail-marker-art" aria-hidden="true">
           {% if earned_at %}
+            {# Add a checkmark when this badge has been earned. #}
             <span class="trail-marker-badge" title="Badge earned!">✓</span>
           {% endif %}
         </span>
         <span class="font-display font-700 text-base text-trailgreendark mt-2">{{ q['title'] }}</span>
         {% if earned_at %}
+          {# Display the date stored with the completed badge. #}
           <span class="text-xs text-trailgreen font-700 mt-1">Earned {{ earned_at[:10] }}</span>
         {% else %}
+          {# Let the player open an unfinished quest from this page. #}
           <a href="{{ url_for('quest', slug=q['slug']) }}" class="text-xs text-inkbrown/50 font-600 mt-1 underline hover:text-trailsky">
             Not earned yet
           </a>

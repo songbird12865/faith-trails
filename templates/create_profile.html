@@ -1,14 +1,20 @@
+{# Use the shared base template for this page. #}
+
 {% extends "base.html" %}
 {% block title %}Welcome{% endblock %}
 
 {% block content %}
 
+<!-- This card collects the information needed to create a player profile. -->
 <div class="bg-white/70 border-4 border-trailgold/40 rounded-3xl shadow-lg p-8 sm:p-12 text-center max-w-md mx-auto">
   <div class="text-6xl mb-4" aria-hidden="true">🧭</div>
   <h1 class="font-display text-2xl sm:text-3xl font-800 text-trailgreendark mb-2">Welcome to Faith Trails!</h1>
   <p class="font-body text-lg text-inkbrown/70 mb-6">Before you start your first quest, what's your name?</p>
 
+  <!-- JavaScript validates this form and sends it to the profile API. -->
   <form id="create-profile-form" class="flex flex-col items-center gap-6">
+    
+    <!-- The player name becomes the label shown throughout the game. -->
     <input
       id="name-input"
       type="text"
@@ -18,10 +24,12 @@
       autofocus
     />
 
+    <!-- These buttons save the player's starting difficulty. -->
     <div class="w-full">
       <p class="font-display font-700 text-trailgreendark mb-3">How tricky should your quests be?</p>
       <div id="difficulty-picker" class="flex flex-col sm:flex-row gap-3 justify-center">
         {% for level in difficulties %}
+          {# Create one button for each difficulty supplied by Flask. #}
           <button
             type="button"
             class="difficulty-option border-2 border-trailgold rounded-xl px-4 py-3 font-display font-700 capitalize flex-1 transition-colors"
@@ -30,10 +38,11 @@
             {{ level }}
           </button>
         {% endfor %}
-      </div>
+      </div>                             <!--Warning message to the player-->
       <p class="text-xs text-inkbrown/60 mt-2">You can change this later, but switching levels starts your badges over.</p>
     </div>
 
+    <!-- Submitting the form creates the profile and opens the trail map. -->
     <button
       type="submit"
       class="bg-trailgreen hover:bg-trailgreendark text-parchment font-display font-700 text-lg px-8 py-3 rounded-full shadow transition-colors"
@@ -41,6 +50,7 @@
       Let's go! &rarr;
     </button>
   </form>
+  <!-- Validation and server messages appear in this reserved space. -->
   <p id="create-feedback" class="text-sm font-700 mt-3 min-h-[1.25rem] text-trailgold"></p>
 </div>
 

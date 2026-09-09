@@ -1,4 +1,4 @@
-/* Full-screen reward shown after the server records quest completion. */
+/* Cover the screen while the new badge celebration is open. */
 .badge-overlay {
   display: none;
   position: fixed;
@@ -11,10 +11,11 @@
 }
 
 .badge-overlay.is-open {
+  /* Show the hidden overlay after JavaScript awards the badge. */
   display: flex;
 }
 
-/* Decorative canvas must stay behind the card and never capture input. */
+/* Keep the confetti canvas behind the main reward card. */
 .confetti-canvas {
   position: absolute;
   inset: 0;
@@ -23,6 +24,7 @@
 }
 
 .badge-card {
+  /* Center the celebration message inside a white card. */
   position: relative;
   z-index: 2;
   background: #ffffff;
@@ -35,6 +37,7 @@
 }
 
 .badge-circle {
+  /* Create the round badge area before its entrance animation plays. */
   width: 120px;
   height: 120px;
   border-radius: 50%;
@@ -47,6 +50,7 @@
 }
 
 .badge-circle--easy {
+  /* Use bronze colors for easy badges. */
   background: #f3ddc9;
   border-color: #b3651c;
 }
@@ -56,6 +60,7 @@
 }
 
 .badge-circle--medium {
+  /* Use silver colors for medium badges. */
   background: #eceff1;
   border-color: #9aa3ab;
 }
@@ -65,6 +70,7 @@
 }
 
 .badge-circle--hard {
+  /* Use gold colors for hard badges. */
   background: #faeeda;
   border-color: #ef9f27;
 }
@@ -74,10 +80,12 @@
 }
 
 .badge-star {
+  /* Make the badge symbol large enough to become the main focus. */
   font-size: 56px;
 }
 
 .badge-title {
+  /* Hide the title at first so JavaScript can reveal it in sequence. */
   font-size: 24px;
   font-weight: 700;
   margin: 0 0 0.5rem;
@@ -86,6 +94,7 @@
 }
 
 .badge-subtext {
+  /* Style the short lesson shown below the badge title. */
   font-size: 17px;
   color: #555;
   margin: 0 0 2rem;
@@ -94,6 +103,7 @@
 }
 
 .badge-continue-btn {
+  /* Style the button that returns the player to the game. */
   padding: 12px 32px;
   font-size: 16px;
   font-weight: 600;
@@ -106,5 +116,6 @@
 }
 
 .badge-continue-btn:hover {
+  /* Darken the button when the pointer is over it. */
   background: #245f46;
 }

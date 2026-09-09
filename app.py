@@ -5,6 +5,7 @@ Flask application entry point.
 Run with:  python app.py
 Then open: http://127.0.0.1:5000
 """
+# Import the tools used by the web server, database, and narration service.
 import sqlite3
 import json
 import random
@@ -19,22 +20,20 @@ from flask import (
 )
 from narration_utils import build_narration_index, narration_filename
 
+# Store the main application settings in one place.
 BASE_DIR = Path(__file__).resolve().parent
 DB_PATH = str(BASE_DIR / "faith_trails.db")
 DIFFICULTIES = ("easy", "medium", "hard")
 
 app = Flask(__name__)
 # Needed for Flask's session cookie (tracks which player is logged in).
-# In production, set this from an environment variable instead of
-# regenerating it on every restart -- otherwise everyone gets logged out
-# each time the server reloads. For the class demo this is fine as-is.
 app.secret_key = os.environ.get("FAITH_TRAILS_SECRET_KEY", "faith-trails-local-development-key-change-in-production")
 
-# ---------------------------------------------------------------------------
+
 # Database helpers
-# ---------------------------------------------------------------------------
 
 def get_db():
+    # Open one database connection for the current web request.
     if "db" not in g:
         g.db = sqlite3.connect(DB_PATH)
         g.db.row_factory = sqlite3.Row
@@ -43,49 +42,23 @@ def get_db():
 
 @app.teardown_appcontext
 def close_db(exception=None):
+    # Close the database connection when the request is finished.
     db = g.pop("db", None)
     if db is not None:
         db.close()
 
 
-# ---------------------------------------------------------------------------
-# Quest content
-# Each quest is a linear list of "scenes." A scene is either a story beat
-# (illustrated text, tap Next to continue), an interactive checkpoint
-# (a hands-on activity, like drag-and-drop), a "quiz" comprehension check
-# (multiple choice, drawn from the story just told), or the closing
-# "memory_verse" challenge (rebuild the verse in order, then identify its
-# reference) that must be completed correctly before the badge is awarded.
-#
-# DIFFICULTY LEVELS
-# The child chooses easy / medium / hard once, when they set up their
-# profile (or later, via "Change difficulty" on the trail map). That
-# choice applies to every quest they play until they change it again.
-# The Bible story itself never changes between difficulties -- only how
-# it's tested does:
-#   - "intro_scenes" / "outro_scenes": the fixed story beats that surround
-#     the interactive checkpoint. These are identical at every difficulty
-#     -- the story doesn't get harder, just the challenge around it does.
-#   - "interactive_by_difficulty": the hands-on checkpoint, scaled per
-#     level (more items to place, more events to sequence, etc).
-#   - "quiz_bank_by_difficulty": a pool of quiz questions per level. A
-#     random sample is drawn each play, so replaying serves different
-#     questions. Harder tiers ask for more specific detail and use
-#     closer-sounding wrong answers.
-#   - "quiz_count_by_difficulty": how many quiz questions to draw per
-#     level (hard asks for one more than easy/medium).
-#   - "verse_bank_by_difficulty": a pool of memory verses per level. Easy
-#     verses are short and familiar; hard verses are longer or use
-#     trickier reference options.
-#   - "lesson": the takeaway shown on the final badge screen (same at
-#     every difficulty).
-# Adding a new Bible story still just means adding a new entry here, not
-# writing new page logic -- the quest() route below assembles whichever
-# pieces match the player's current_difficulty into the final scene list.
-# ---------------------------------------------------------------------------
 
-QUEST_CONTENT = {
-    "noahs-ark": {
+# Each quest contains story scenes, an activity, quizzes, and a memory verse.
+# Difficulty changes the activities and questions, but not the Bible story.
+# A new Bible story can be added as another entry in this dictionary.
+
+
+QUEST_CONTENT = 
+{
+    # Noah's quest teaches obedience and trust.
+    "noahs-ark": 
+    {
         "title": "Noah's Ark",
         "intro_scenes": [
             {
@@ -101,8 +74,10 @@ QUEST_CONTENT = {
                         "big enough for his family and two of every animal.",
             },
         ],
-        "interactive_by_difficulty": {
-            "easy": {
+        "interactive_by_difficulty": 
+        {
+            "easy": 
+            {
                 "type": "interactive",
                 "subtype": "matching",
                 "prompt": "Drag each animal into the ark to help Noah gather them, two by two!",
@@ -126,7 +101,8 @@ QUEST_CONTENT = {
                     {"id": "camel", "emoji": "🐫", "label": "Camel"},
                 ],
             },
-            "hard": {
+            "hard": 
+            {
                 "type": "interactive",
                 "subtype": "matching",
                 "prompt": "Drag every animal into the ark to help Noah gather them, two by two!",
@@ -156,7 +132,8 @@ QUEST_CONTENT = {
                         "as a promise: He would never destroy the whole Earth by flood again.",
             },
         ],
-        "quiz_bank_by_difficulty": {
+        "quiz_bank_by_difficulty": 
+        {
             "easy": [
                 {
                     "type": "quiz",
@@ -243,7 +220,8 @@ QUEST_CONTENT = {
             ],
         },
         "quiz_count_by_difficulty": {"easy": 2, "medium": 2, "hard": 3},
-        "verse_bank_by_difficulty": {
+        "verse_bank_by_difficulty": 
+        {
             "easy": [
                 {
                     "type": "memory_verse",
@@ -271,7 +249,9 @@ QUEST_CONTENT = {
         },
         "lesson": "God keeps His promises, even when things feel scary.",
     },
-    "josephs-coat": {
+    # Joseph's quest teaches forgiveness and God's greater plan.
+    "josephs-coat": 
+    {
         "title": "Joseph's Colorful Coat",
         "intro_scenes": [
             {
@@ -287,8 +267,10 @@ QUEST_CONTENT = {
                         "It seemed like their father loved Joseph the most of all.",
             },
         ],
-        "interactive_by_difficulty": {
-            "easy": {
+        "interactive_by_difficulty": 
+        {
+            "easy": 
+            {
                 "type": "interactive",
                 "subtype": "color_picker",
                 "prompt": "Help design Joseph's colorful coat! Tap 4 colors to fill it in.",
@@ -302,7 +284,8 @@ QUEST_CONTENT = {
                     {"name": "Teal", "hex": "#3B9C8A"},
                 ],
             },
-            "medium": {
+            "medium": 
+            {
                 "type": "interactive",
                 "subtype": "color_picker",
                 "prompt": "Help design Joseph's colorful coat! Tap 6 colors to fill it in.",
@@ -317,7 +300,8 @@ QUEST_CONTENT = {
                     {"name": "Coral", "hex": "#E07856"},
                 ],
             },
-            "hard": {
+            "hard": 
+            {
                 "type": "interactive",
                 "subtype": "color_picker",
                 "prompt": "Help design Joseph's colorful coat! Tap 8 colors to fill it in — try not to "
@@ -349,7 +333,8 @@ QUEST_CONTENT = {
                         "far from home, Joseph trusted that God was with him.",
             },
         ],
-        "quiz_bank_by_difficulty": {
+        "quiz_bank_by_difficulty": 
+        {
             "easy": [
                 {
                     "type": "quiz",
@@ -432,7 +417,8 @@ QUEST_CONTENT = {
             ],
         },
         "quiz_count_by_difficulty": {"easy": 2, "medium": 2, "hard": 3},
-        "verse_bank_by_difficulty": {
+        "verse_bank_by_difficulty": 
+        {
             "easy": [
                 {
                     "type": "memory_verse",
@@ -460,7 +446,9 @@ QUEST_CONTENT = {
         },
         "lesson": "God is with us, even when things feel hard or unfair.",
     },
-    "red-sea": {
+    # Moses' quest teaches courage and trust in God.
+    "red-sea": 
+    {
         "title": "Moses and the Red Sea",
         "intro_scenes": [
             {
@@ -488,8 +476,10 @@ QUEST_CONTENT = {
                         "gave in and let the people leave.",
             },
         ],
-        "interactive_by_difficulty": {
-            "easy": {
+        "interactive_by_difficulty": 
+        {
+            "easy": 
+            {
                 "type": "interactive",
                 "subtype": "sequence",
                 "prompt": "Tap these three events in the order they happened!",
@@ -499,7 +489,8 @@ QUEST_CONTENT = {
                     {"id": "cross", "emoji": "🕊️", "label": "The people cross safely"},
                 ],
             },
-            "medium": {
+            "medium": 
+            {
                 "type": "interactive",
                 "subtype": "sequence",
                 "prompt": "Tap these five events in the order they happened!",
@@ -511,7 +502,8 @@ QUEST_CONTENT = {
                     {"id": "cross", "emoji": "🕊️", "label": "The people cross safely"},
                 ],
             },
-            "hard": {
+            "hard": 
+            {
                 "type": "interactive",
                 "subtype": "sequence",
                 "prompt": "Tap all seven events in the exact order they happened!",
@@ -541,7 +533,8 @@ QUEST_CONTENT = {
                         "God's people walked safely across to their new home.",
             },
         ],
-        "quiz_bank_by_difficulty": {
+        "quiz_bank_by_difficulty": 
+        {
             "easy": [
                 {
                     "type": "quiz",
@@ -628,7 +621,8 @@ QUEST_CONTENT = {
             ],
         },
         "quiz_count_by_difficulty": {"easy": 2, "medium": 2, "hard": 3},
-        "verse_bank_by_difficulty": {
+        "verse_bank_by_difficulty": 
+        {
             "easy": [
                 {
                     "type": "memory_verse",
@@ -656,7 +650,9 @@ QUEST_CONTENT = {
         },
         "lesson": "When we're afraid, we can be still and trust God to fight for us.",
     },
-    "david-goliath": {
+    # David's quest teaches faith when facing a large challenge.
+    "david-goliath": 
+    {
         "title": "David & Goliath",
         "intro_scenes": [
             {
@@ -670,7 +666,8 @@ QUEST_CONTENT = {
                 "text": "David was only a young shepherd, but he trusted God completely. He told King Saul that he would face the giant.",
             },
         ],
-        "interactive_by_difficulty": {
+        "interactive_by_difficulty": 
+        {
             "easy": {
                 "type": "interactive", "subtype": "matching",
                 "prompt": "Help David prepare! Put the five smooth stones into his shepherd's bag.",
@@ -682,7 +679,8 @@ QUEST_CONTENT = {
                     {"id": "stone-5", "emoji": "🪨", "label": "Smooth stone 5"},
                 ],
             },
-            "medium": {
+            "medium": 
+            {
                 "type": "interactive", "subtype": "sequence",
                 "prompt": "Tap these events in the order they happened!",
                 "items": [
@@ -719,7 +717,8 @@ QUEST_CONTENT = {
                 "text": "David said the battle belonged to God. He swung his sling, the stone struck Goliath down, and the whole army saw what faith could do.",
             },
         ],
-        "quiz_bank_by_difficulty": {
+        "quiz_bank_by_difficulty": 
+        {
             "easy": [
                 {"type": "quiz", "prompt": "Who was the giant?", "options": ["Goliath", "Saul", "Jonah"], "correct_index": 0},
                 {"type": "quiz", "prompt": "What did David use to face Goliath?", "options": ["A sling and stones", "A spear", "A chariot"], "correct_index": 0},
@@ -737,21 +736,26 @@ QUEST_CONTENT = {
             ],
         },
         "quiz_count_by_difficulty": {"easy": 2, "medium": 2, "hard": 3},
-        "verse_bank_by_difficulty": {
+        "verse_bank_by_difficulty": 
+        {
             "easy": [{"type": "memory_verse", "verse": "The battle is the Lord's.", "reference": "1 Samuel 17:47", "reference_options": ["1 Samuel 17:47", "1 Samuel 7:47", "2 Samuel 17:47"]}],
             "medium": [{"type": "memory_verse", "verse": "It is not by sword or spear that the Lord saves; for the battle is the Lord's.", "reference": "1 Samuel 17:47", "reference_options": ["1 Samuel 17:47", "1 Samuel 17:37", "2 Samuel 17:47"]}],
             "hard": [{"type": "memory_verse", "verse": "The Lord who rescued me from the paw of the lion and the paw of the bear will rescue me from the hand of this Philistine.", "reference": "1 Samuel 17:37", "reference_options": ["1 Samuel 17:37", "1 Samuel 17:47", "2 Samuel 17:37"]}],
         },
         "lesson": "Courage grows when we trust that God is bigger than every giant we face.",
     },
-    "jonah-big-fish": {
+    # Jonah's quest teaches obedience and second chances.
+    "jonah-big-fish": 
+    {
         "title": "Jonah and the Big Fish",
         "intro_scenes": [
             {"type": "story", "emoji": "🏙️", "text": "God asked Jonah to go to Nineveh and warn the people to turn back to Him."},
             {"type": "story", "emoji": "⛵", "text": "Jonah was afraid and ran the other way. He boarded a ship headed far from Nineveh."},
         ],
-        "interactive_by_difficulty": {
-            "easy": {
+        "interactive_by_difficulty": 
+        {
+            "easy": 
+            {
                 "type": "interactive", "subtype": "sequence", "prompt": "Tap these three events in the order they happened!",
                 "items": [
                     {"id": "run", "emoji": "⛵", "label": "Jonah sails away"},
@@ -769,7 +773,8 @@ QUEST_CONTENT = {
                     {"id": "fish", "emoji": "🐋", "label": "A big fish swallows Jonah"},
                 ],
             },
-            "hard": {
+            "hard": 
+            {
                 "type": "interactive", "subtype": "sequence", "prompt": "Tap all seven events in the exact order they happened!",
                 "items": [
                     {"id": "call", "emoji": "🏙️", "label": "God sends Jonah to Nineveh"},
@@ -786,7 +791,8 @@ QUEST_CONTENT = {
             {"type": "story", "emoji": "🌊", "text": "Jonah told the sailors to throw him into the sea. The moment they did, the storm became calm, and God sent a huge fish to swallow Jonah."},
             {"type": "story", "emoji": "🙏", "text": "Jonah prayed inside the fish for three days and three nights. God had the fish spit him onto dry land, and Jonah obeyed God the second time."},
         ],
-        "quiz_bank_by_difficulty": {
+        "quiz_bank_by_difficulty": 
+        {
             "easy": [
                 {"type": "quiz", "prompt": "Where did God ask Jonah to go?", "options": ["Nineveh", "Egypt", "Bethlehem"], "correct_index": 0},
                 {"type": "quiz", "prompt": "What swallowed Jonah?", "options": ["A huge fish", "A lion", "A crocodile"], "correct_index": 0},
@@ -804,21 +810,26 @@ QUEST_CONTENT = {
             ],
         },
         "quiz_count_by_difficulty": {"easy": 2, "medium": 2, "hard": 3},
-        "verse_bank_by_difficulty": {
+        "verse_bank_by_difficulty": 
+        {
             "easy": [{"type": "memory_verse", "verse": "In my distress I called to the Lord, and he answered me.", "reference": "Jonah 2:2", "reference_options": ["Jonah 2:2", "Jonah 1:2", "Joel 2:2"]}],
             "medium": [{"type": "memory_verse", "verse": "Then the word of the Lord came to Jonah a second time.", "reference": "Jonah 3:1", "reference_options": ["Jonah 3:1", "Jonah 1:3", "Joel 3:1"]}],
             "hard": [{"type": "memory_verse", "verse": "Those who cling to worthless idols turn away from God's love for them.", "reference": "Jonah 2:8", "reference_options": ["Jonah 2:8", "Jonah 3:8", "Joel 2:8"]}],
         },
         "lesson": "God gives second chances, and obeying Him is always the right direction.",
     },
-    "daniel-lions-den": {
+    # Daniel's quest teaches faithfulness during frightening times.
+    "daniel-lions-den": 
+    {
         "title": "Daniel and the Lions' Den",
         "intro_scenes": [
             {"type": "story", "emoji": "🙏", "text": "Daniel loved God and prayed to Him every day, even after moving to a new kingdom with different rules."},
             {"type": "story", "emoji": "📜", "text": "Jealous officials tricked the king into making a law: anyone who prayed to anyone but the king would be thrown to the lions."},
         ],
-        "interactive_by_difficulty": {
-            "easy": {
+        "interactive_by_difficulty": 
+        {
+            "easy": 
+            {
                 "type": "interactive", "subtype": "matching", "prompt": "Help the angel! Gently guide each lion to a quiet resting place.",
                 "items": [
                     {"id": "lion-1", "emoji": "🦁", "label": "Lion 1"},
@@ -836,7 +847,8 @@ QUEST_CONTENT = {
                     {"id": "safe", "emoji": "😇", "label": "God keeps Daniel safe"},
                 ],
             },
-            "hard": {
+            "hard": 
+            {
                 "type": "interactive", "subtype": "sequence", "prompt": "Tap all seven events in the exact order they happened!",
                 "items": [
                     {"id": "jealous", "emoji": "😠", "label": "Jealous officials plan a trap"},
@@ -853,7 +865,8 @@ QUEST_CONTENT = {
             {"type": "story", "emoji": "🦁", "text": "Daniel kept praying to God, just as he always had. The officials caught him, and the saddened king had Daniel thrown into the lions' den."},
             {"type": "story", "emoji": "😇", "text": "God sent an angel to shut the lions' mouths. In the morning, the king found Daniel completely safe because Daniel had trusted God."},
         ],
-        "quiz_bank_by_difficulty": {
+        "quiz_bank_by_difficulty": 
+        {
             "easy": [
                 {"type": "quiz", "prompt": "Who did Daniel pray to?", "options": ["God", "The king", "The officials"], "correct_index": 0},
                 {"type": "quiz", "prompt": "Where was Daniel thrown?", "options": ["Into the lions' den", "Into the sea", "Into a prison tower"], "correct_index": 0},
@@ -871,7 +884,8 @@ QUEST_CONTENT = {
             ],
         },
         "quiz_count_by_difficulty": {"easy": 2, "medium": 2, "hard": 3},
-        "verse_bank_by_difficulty": {
+        "verse_bank_by_difficulty": 
+        {
             "easy": [{"type": "memory_verse", "verse": "My God sent his angel, and he shut the mouths of the lions.", "reference": "Daniel 6:22", "reference_options": ["Daniel 6:22", "Daniel 6:12", "David 6:22"]}],
             "medium": [{"type": "memory_verse", "verse": "He got down on his knees and prayed, giving thanks to his God, just as he had done before.", "reference": "Daniel 6:10", "reference_options": ["Daniel 6:10", "Daniel 6:20", "Daniel 3:10"]}],
             "hard": [{"type": "memory_verse", "verse": "He is the living God and he endures forever; his kingdom will not be destroyed, his dominion will never end.", "reference": "Daniel 6:26", "reference_options": ["Daniel 6:26", "Daniel 3:26", "Daniel 6:16"]}],
@@ -880,32 +894,29 @@ QUEST_CONTENT = {
     },
 }
 
-# Attaches a "narration_file" field to every scene/question/verse dict
-# above (and a "lesson_narration_file" to each quest), and returns the
-# flat list generate_narration.py uses to actually call ElevenLabs. Run
-# once here, at import time, so every request already has the filenames
-# baked in with zero extra per-request work.
+# Add a narration filename to every spoken part of every quest.
 NARRATION_INDEX = build_narration_index(QUEST_CONTENT)
 CHAMPION_NARRATION_TEXT = (
     "You followed Noah, Joseph, Moses, David, Jonah, and Daniel through every adventure. "
     "Each one trusted God in a different way—and now you know that you can trust Him too."
 )
 CHAMPION_NARRATION_FILE = narration_filename("faith-trails-champion", CHAMPION_NARRATION_TEXT)
-NARRATION_INDEX.append({
+NARRATION_INDEX.append(
+    {
     "key": "faith-trails-champion",
     "text": CHAMPION_NARRATION_TEXT,
     "filename": CHAMPION_NARRATION_FILE,
 })
 
 
-# ---------------------------------------------------------------------------
 # Helpers
-# ---------------------------------------------------------------------------
+
 
 def get_current_user(db):
     """Returns the users row for whoever is logged in this session, or
     None if nobody's picked a profile yet (session has no user_id, or
     that user_id no longer exists)."""
+    # Read the selected player's ID from the browser session.
     user_id = session.get("user_id")
     if user_id is None:
         return None
@@ -920,10 +931,12 @@ def build_scenes(content, difficulty):
     fixed outro scenes, a fresh random sample of quiz questions from
     that difficulty's bank, and one random verse from that difficulty's
     bank."""
+    # Select the question and verse choices for this difficulty.
     quiz_bank = content["quiz_bank_by_difficulty"][difficulty]
     quiz_count = min(content["quiz_count_by_difficulty"][difficulty], len(quiz_bank))
     verse_bank = content["verse_bank_by_difficulty"][difficulty]
 
+    # Combine all parts into one ordered adventure.
     return (
         content["intro_scenes"]
         + [content["interactive_by_difficulty"][difficulty]]
@@ -933,10 +946,11 @@ def build_scenes(content, difficulty):
     )
 
 
-# ---------------------------------------------------------------------------
-# Routes
-# ---------------------------------------------------------------------------
 
+# Routes
+
+
+# These routes display the player selection and game pages.
 @app.route("/players")
 def players():
     """Who's Playing? Lists every existing profile so a returning player
@@ -953,6 +967,7 @@ def players():
 def select_player(user_id):
     """Logs the chosen player in by storing their id in the session,
     then sends them to the trail map."""
+    # Confirm the player exists before saving the login session.
     db = get_db()
     user = db.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
     if user is None:
@@ -989,6 +1004,7 @@ def home():
     if profile is None:
         return redirect(url_for("players"))
 
+    # Load the trail and badges for the player's current difficulty.
     quests = db.execute(
         "SELECT * FROM quests ORDER BY sort_order"
     ).fetchall()
@@ -1019,10 +1035,12 @@ def badges():
     if profile is None:
         return redirect(url_for("players"))
 
+    # Load every available quest and its earned date.
     quests = db.execute(
         "SELECT * FROM quests WHERE is_available = 1 ORDER BY sort_order"
     ).fetchall()
-    earned = {
+    earned = 
+    {
         row["quest_id"]: row["earned_at"]
         for row in db.execute(
             "SELECT quest_id, earned_at FROM badges_earned WHERE user_id = ? AND difficulty = ?",
@@ -1035,17 +1053,16 @@ def badges():
 @app.route("/hall-of-fame")
 def hall_of_fame():
     """Hall of Fame: a table view of every badge earned across every
-    difficulty at once (unlike the trail map and badge case, which only
-    show badges for the profile's current_difficulty). Rows are quests,
-    columns are easy/medium/hard -- exactly the view for a child (or
-    parent) who wants to see everything they've ever earned in one
-    place, not just their current level."""
+    difficulty at once. Rows are quests; columns are easy/medium/hard, for a child
+    who wants to see everything they've ever earned in one place, not just their current level."""
+    
     db = get_db()
     profile = get_current_user(db)
 
     if profile is None:
         return redirect(url_for("players"))
 
+    # Load badges from all three difficulty levels.
     quests = db.execute(
         "SELECT * FROM quests ORDER BY sort_order"
     ).fetchall()
@@ -1067,12 +1084,14 @@ def hall_of_fame():
 
 @app.route("/quest/<slug>")
 def quest(slug):
+    """Open one quest in the shared game screen."""
     db = get_db()
     profile = get_current_user(db)
 
     if profile is None:
         return redirect(url_for("players"))
 
+    # Find the requested quest by its URL name.
     quest_row = db.execute(
         "SELECT * FROM quests WHERE slug = ?", (slug,)
     ).fetchone()
@@ -1104,6 +1123,7 @@ def quest(slug):
     )
 
 
+# These API routes send JSON data to the game JavaScript.
 @app.route("/api/quest/<slug>")
 def api_quest(slug):
     """Return one randomized quest playthrough to the permanent game shell."""
@@ -1117,6 +1137,8 @@ def api_quest(slug):
         return jsonify({"error": "Quest not found"}), 404
     if not quest_row["is_available"]:
         return jsonify({"error": "Quest coming soon"}), 409
+    
+    # Build a fresh scene list using the player's difficulty.
     difficulty = profile["current_difficulty"]
     return jsonify({
         "quest": dict(quest_row),
@@ -1134,6 +1156,8 @@ def api_progress():
     profile = get_current_user(db)
     if profile is None:
         return jsonify({"error": "No player logged in"}), 401
+    
+    # Return both quest details and all earned badge records.
     quests = [dict(row) for row in db.execute(
         "SELECT * FROM quests ORDER BY sort_order"
     ).fetchall()]
@@ -1146,7 +1170,9 @@ def api_progress():
 
 @app.route("/api/narration/<path:filename>")
 def api_narration(filename):
+
     """Serve cached narration, generating a missing file securely on demand."""
+    # Accept only filenames that were created from known quest content.
     narration_item = next(
         (item for item in NARRATION_INDEX if item["filename"] == filename),
         None,
@@ -1156,6 +1182,8 @@ def api_narration(filename):
 
     output_dir = BASE_DIR / "static" / "audio" / "quests"
     output_path = output_dir / filename
+
+    # Send a saved audio file immediately when it already exists.
     if output_path.exists():
         return send_file(output_path, mimetype="audio/mpeg")
 
@@ -1164,6 +1192,8 @@ def api_narration(filename):
         return jsonify({"error": "ElevenLabs narration is not configured"}), 503
 
     voice_id = os.environ.get("ELEVENLABS_VOICE_ID", "Q4oILuo4P8VeXtE6FMLI")
+
+    # Prepare the text and voice settings for ElevenLabs.
     payload = json.dumps({
         "text": narration_item["text"],
         "model_id": "eleven_multilingual_v2",
@@ -1180,12 +1210,14 @@ def api_narration(filename):
         headers={"xi-api-key": api_key, "Content-Type": "application/json"},
         method="POST",
     )
+    # Request the audio while handling network service errors safely.
     try:
         with urlrequest.urlopen(eleven_request, timeout=45) as response:
             audio_bytes = response.read()
     except (HTTPError, URLError, TimeoutError):
         return jsonify({"error": "Narration could not be generated"}), 502
 
+    # Save the completed audio file for future requests.
     output_dir.mkdir(parents=True, exist_ok=True)
     temporary_path = output_path.with_suffix(".tmp")
     temporary_path.write_bytes(audio_bytes)
@@ -1203,6 +1235,7 @@ def complete_quest(slug):
     if profile is None:
         return jsonify({"error": "No player logged in"}), 401
 
+    # Confirm the quest exists before awarding its badge.
     quest_row = db.execute(
         "SELECT * FROM quests WHERE slug = ?", (slug,)
     ).fetchone()
@@ -1213,6 +1246,7 @@ def complete_quest(slug):
     if not profile["current_difficulty"]:
         return jsonify({"error": "No difficulty set for this profile"}), 400
 
+    # Save one badge per player, quest, and difficulty.
     db.execute(
         "INSERT OR IGNORE INTO badges_earned (user_id, quest_id, difficulty) VALUES (?, ?, ?)",
         (profile["id"], quest_row["id"], profile["current_difficulty"]),
@@ -1224,13 +1258,14 @@ def complete_quest(slug):
 
 @app.route("/api/quests", methods=["GET"])
 def api_quests():
-    """READ: returns every quest as JSON, including whether the demo user
+    """READ: returns every quest as JSON, including whether the user
     has earned its badge yet at their current difficulty. Useful for
-    testing the API layer directly (e.g. visiting /api/quests in the
-    browser) and for any future screen that needs quest data without a
-    full page reload."""
+    testing the API layer directly (ex: visiting /api/quests in the
+    browser)."""
     db = get_db()
     profile = get_current_user(db)
+    
+    # Load the quest list and the current player's earned badges.
     quests = db.execute("SELECT * FROM quests ORDER BY sort_order").fetchall()
     earned = set()
     if profile is not None and profile["current_difficulty"]:
@@ -1259,25 +1294,29 @@ def api_quests():
 def create_profile():
     """CREATE: registers a brand-new player (name + starting difficulty)
     and logs them in for this session. Player names must be unique
-    (case-insensitive) so the picker on /players can tell everyone
-    apart. (Separate from the PUT endpoint below, which handles
-    renames/difficulty changes for whoever's currently logged in.)"""
+    (case-insensitive) so the picker on the players can tell everyone
+    apart."""
+
+    # Read and clean the submitted profile values.
     data = request.get_json(silent=True) or {}
     new_name = (data.get("name") or "").strip()
     difficulty = (data.get("difficulty") or "").strip().lower()
 
+    # Reject missing names and unsupported difficulty values.
     if not new_name:
         return jsonify({"error": "A non-empty 'name' is required"}), 400
     if difficulty not in DIFFICULTIES:
         return jsonify({"error": "A 'difficulty' of easy, medium, or hard is required"}), 400
 
     db = get_db()
+    # Keep player names unique regardless of capitalization.
     existing = db.execute(
         "SELECT id FROM users WHERE name = ? COLLATE NOCASE", (new_name,)
     ).fetchone()
     if existing is not None:
         return jsonify({"error": "That name is already taken -- pick a different one"}), 409
 
+    # Create the player and log them in for this browser session.
     cursor = db.execute(
         "INSERT INTO users (name, current_difficulty) VALUES (?, ?)",
         (new_name, difficulty),
@@ -1302,12 +1341,9 @@ def get_profile_route():
 @app.route("/api/profile", methods=["PUT"])
 def update_profile():
     """UPDATE: lets a child (or parent) change the profile name and/or
-    difficulty shown in the app. Expects a JSON body like
-    {"name": "Aria"} and/or {"difficulty": "hard"}. Changing difficulty
-    doesn't erase any badges -- they stay in the database under their
-    original difficulty -- but the trail map will only show badges
-    earned at the newly selected difficulty, so it will look like
-    progress was reset."""
+    difficulty shown in the app. Changing difficultydoesn't erase any badges."""
+
+    # Start with the saved values and replace only submitted fields.
     data = request.get_json(silent=True) or {}
     db = get_db()
     profile = get_current_user(db)
@@ -1325,6 +1361,7 @@ def update_profile():
     if not new_name:
         return jsonify({"error": "A non-empty 'name' is required"}), 400
 
+    # Check for a name conflict only when the name is changing.
     if new_name.lower() != profile["name"].lower():
         clash = db.execute(
             "SELECT id FROM users WHERE name = ? COLLATE NOCASE AND id != ?",
@@ -1333,6 +1370,7 @@ def update_profile():
         if clash is not None:
             return jsonify({"error": "That name is already taken -- pick a different one"}), 409
 
+    # Save the updated name and difficulty together.
     db.execute(
         "UPDATE users SET name = ?, current_difficulty = ? WHERE id = ?",
         (new_name, new_difficulty, profile["id"]),
@@ -1345,7 +1383,7 @@ def update_profile():
 @app.route("/api/reset/<slug>", methods=["DELETE"])
 def reset_badge(slug):
     """DELETE: removes an earned badge for a quest at the profile's
-    current difficulty, so the demo user can replay it. Also useful
+    current difficulty, so the user can replay it. Also useful
     during development/testing."""
     db = get_db()
     profile = get_current_user(db)
@@ -1359,6 +1397,7 @@ def reset_badge(slug):
     if quest_row is None:
         return jsonify({"error": "Quest not found"}), 404
 
+    # Delete only the badge for the player's current difficulty.
     cursor = db.execute(
         "DELETE FROM badges_earned WHERE user_id = ? AND quest_id = ? AND difficulty = ?",
         (profile["id"], quest_row["id"], profile["current_difficulty"]),
@@ -1372,4 +1411,5 @@ def reset_badge(slug):
 
 
 if __name__ == "__main__":
+    # Start Flask only when this file is run directly.
     app.run(debug=True)

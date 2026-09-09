@@ -1,10 +1,11 @@
-/* Optional replay control for screens that expose manual narration. */
+/* Keep the narration replay control close to the text it reads. */
 .narration-control {
   display: inline-flex;
   margin: 0.5rem 0 1rem;
 }
 
 .narration-btn {
+  /* Style the replay button as a clear rounded control. */
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -19,9 +20,11 @@
 }
 
 .narration-btn:hover {
+  /* Darken the replay button when the pointer is over it. */
   background: #245f46;
 }
 
 .narration-btn i {
+  /* Make the sound icon slightly larger than the button text. */
   font-size: 18px;
 }
