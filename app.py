@@ -54,8 +54,7 @@ def close_db(exception=None):
 # A new Bible story can be added as another entry in this dictionary.
 
 
-QUEST_CONTENT = 
-{
+QUEST_CONTENT = {
     # Noah's quest teaches obedience and trust.
     "noahs-ark": 
     {
@@ -1039,8 +1038,7 @@ def badges():
     quests = db.execute(
         "SELECT * FROM quests WHERE is_available = 1 ORDER BY sort_order"
     ).fetchall()
-    earned = 
-    {
+    earned = {
         row["quest_id"]: row["earned_at"]
         for row in db.execute(
             "SELECT quest_id, earned_at FROM badges_earned WHERE user_id = ? AND difficulty = ?",
