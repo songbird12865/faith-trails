@@ -13,8 +13,8 @@
   );
     if (!response.ok) throw new Error(`Request failed: ${response.status}`);
     const html = await response.text();
-    return 
-    {
+    return {
+    
       response,
       doc: new DOMParser().parseFromString(html, 'text/html'),
     };
