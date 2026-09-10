@@ -480,6 +480,7 @@ QUEST_CONTENT = {
                 "text": "God's people set out for the land God had promised them. But "
                         "a huge sea, the Red Sea, blocked their path!",
             },
+        ],
         "outro_scenes": [
             {
                 "type": "story",
@@ -490,7 +491,7 @@ QUEST_CONTENT = {
             },
         ],
 
-        ],
+        
         "interactive_by_difficulty": 
         {
             "easy": 
