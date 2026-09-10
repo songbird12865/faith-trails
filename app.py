@@ -474,6 +474,22 @@ QUEST_CONTENT = {
                 "text": "God sent trouble after trouble to Egypt, until Pharaoh finally "
                         "gave in and let the people leave.",
             },
+            {
+                "type": "story",
+                "emoji": "🌊",
+                "text": "God's people set out for the land God had promised them. But "
+                        "a huge sea, the Red Sea, blocked their path!",
+            },
+        "outro_scenes": [
+            {
+                "type": "story",
+                "emoji": "🪄",
+                "text": "God told Moses to raise his staff. When he did, God performed "
+                        "an amazing miracle — the sea parted, and dry ground appeared! "
+                        "God's people walked safely across to their new home.",
+            },
+        ],
+
         ],
         "interactive_by_difficulty": 
         {
@@ -517,21 +533,6 @@ QUEST_CONTENT = {
                 ],
             },
         },
-        "outro_scenes": [
-            {
-                "type": "story",
-                "emoji": "🌊",
-                "text": "God's people set out for the land God had promised them. But "
-                        "a huge sea, the Red Sea, blocked their path!",
-            },
-            {
-                "type": "story",
-                "emoji": "🪄",
-                "text": "God told Moses to raise his staff. When he did, God performed "
-                        "an amazing miracle — the sea parted, and dry ground appeared! "
-                        "God's people walked safely across to their new home.",
-            },
-        ],
         "quiz_bank_by_difficulty": 
         {
             "easy": [
@@ -664,6 +665,12 @@ QUEST_CONTENT = {
                 "emoji": "🐑",
                 "text": "David was only a young shepherd, but he trusted God completely. He told King Saul that he would face the giant.",
             },
+            {
+                "type": "story",
+                "emoji": "🛡️",
+                "text": "David refused Saul's heavy armor. He picked up five smooth stones and his sling, trusting God instead of weapons.",
+            },
+
         ],
         "interactive_by_difficulty": 
         {
@@ -707,11 +714,6 @@ QUEST_CONTENT = {
         "outro_scenes": [
             {
                 "type": "story",
-                "emoji": "🛡️",
-                "text": "David refused Saul's heavy armor. He picked up five smooth stones and his sling, trusting God instead of weapons.",
-            },
-            {
-                "type": "story",
                 "emoji": "🎯",
                 "text": "David said the battle belonged to God. He swung his sling, the stone struck Goliath down, and the whole army saw what faith could do.",
             },
@@ -750,6 +752,8 @@ QUEST_CONTENT = {
         "intro_scenes": [
             {"type": "story", "emoji": "🏙️", "text": "God asked Jonah to go to Nineveh and warn the people to turn back to Him."},
             {"type": "story", "emoji": "⛵", "text": "Jonah was afraid and ran the other way. He boarded a ship headed far from Nineveh."},
+            {"type": "story", "emoji": "🌊", "text": "Jonah told the sailors to throw him into the sea. The moment they did, the storm became calm, and God sent a huge fish to swallow Jonah."},
+
         ],
         "interactive_by_difficulty": 
         {
@@ -787,7 +791,6 @@ QUEST_CONTENT = {
             },
         },
         "outro_scenes": [
-            {"type": "story", "emoji": "🌊", "text": "Jonah told the sailors to throw him into the sea. The moment they did, the storm became calm, and God sent a huge fish to swallow Jonah."},
             {"type": "story", "emoji": "🙏", "text": "Jonah prayed inside the fish for three days and three nights. God had the fish spit him onto dry land, and Jonah obeyed God the second time."},
         ],
         "quiz_bank_by_difficulty": 
