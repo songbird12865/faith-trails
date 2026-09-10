@@ -824,6 +824,7 @@ QUEST_CONTENT = {
         "intro_scenes": [
             {"type": "story", "emoji": "🙏", "text": "Daniel loved God and prayed to Him every day, even after moving to a new kingdom with different rules."},
             {"type": "story", "emoji": "📜", "text": "Jealous officials tricked the king into making a law: anyone who prayed to anyone but the king would be thrown to the lions."},
+            {"type": "story", "emoji": "🦁", "text": "Daniel kept praying to God, just as he always had. The officials caught him, and the saddened king had Daniel thrown into the lions' den."},
         ],
         "interactive_by_difficulty": 
         {
@@ -861,7 +862,6 @@ QUEST_CONTENT = {
             },
         },
         "outro_scenes": [
-            {"type": "story", "emoji": "🦁", "text": "Daniel kept praying to God, just as he always had. The officials caught him, and the saddened king had Daniel thrown into the lions' den."},
             {"type": "story", "emoji": "😇", "text": "God sent an angel to shut the lions' mouths. In the morning, the king found Daniel completely safe because Daniel had trusted God."},
         ],
         "quiz_bank_by_difficulty": 
@@ -1290,7 +1290,7 @@ def api_quests():
 
 @app.route("/api/profile", methods=["POST"])
 def create_profile():
-    """CREATE: registers a brand-new player (name + starting difficulty)
+    """CREATE: registers a brand-new player (name and starting difficulty)
     and logs them in for this session. Player names must be unique
     (case-insensitive) so the picker on the players can tell everyone
     apart."""
