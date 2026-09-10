@@ -752,8 +752,8 @@ QUEST_CONTENT = {
         "title": "Jonah and the Big Fish",
         "intro_scenes": [
             {"type": "story", "emoji": "🏙️", "text": "God asked Jonah to go to Nineveh and warn the people to turn back to Him."},
-            {"type": "story", "emoji": "⛵", "text": "Jonah was afraid and ran the other way. He boarded a ship headed far from Nineveh."},
-            {"type": "story", "emoji": "🌊", "text": "Jonah told the sailors to throw him into the sea. The moment they did, the storm became calm, and God sent a huge fish to swallow Jonah."},
+            {"type": "story", "emoji": "⛵", "text": "Jonah was afraid and ran the other way. He boarded a ship headed far from Nineveh. A BIG storm arose!"},
+            {"type": "story", "emoji": "🌊", "text": "The crew was terrified. Jonah told the sailors to throw him into the sea. The moment they did, the storm became calm, and God sent a huge fish to swallow Jonah."},
 
         ],
         "interactive_by_difficulty": 
