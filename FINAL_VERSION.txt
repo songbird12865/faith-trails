@@ -1,0 +1,16 @@
+FAITH TRAILS — FINAL VERIFIED VERSION
+
+Date verified: September 10, 2026
+
+Verification completed:
+- 20 automated tests passed.
+- Player selection passed.
+- New-player profile creation passed.
+- Difficulty selection and changes passed.
+- Full quest playthrough passed.
+- ElevenLabs narration passed.
+- Music and narration controls passed.
+- Badge Collection and Hall of Fame passed.
+
+This version is preserved as the final working course submission.
+Avoid making changes unless a required feature is found to be broken.
