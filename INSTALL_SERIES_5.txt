@@ -1,0 +1,31 @@
+FAITH-TRAILS SERIES 5 - JESUS & THE GOOD NEWS
+
+This package adds five complete playable quests:
+  21. The Nativity
+  22. Jesus' Teachings: The Beatitudes
+  23. The Good Samaritan
+  24. Feeding the 5,000
+  25. Easter
+
+The application now contains all 25 playable quests and 75 earnable badges.
+Each Series 5 quest includes six changing story illustrations, an activity,
+age-related Easy/Medium/Hard quizzes, an approved memory verse, and a closing lesson.
+
+SAFE LOCAL TEST
+1. Extract this package into a separate folder.
+2. Do not copy your live faith_trails.db into the folder until you have made a backup.
+3. From the extracted folder, run:
+       python -m unittest test_faith_trails.py -v
+4. Generate the new narration files with your Series 5 voice configured:
+       python generate_narration.py
+5. Start the app:
+       python app.py
+
+PYTHONANYWHERE
+1. Back up the live project and faith_trails.db first.
+2. Upload the new and changed code and artwork files.
+3. Keep ELEVENLABS_API_KEY in the PythonAnywhere environment; never place it in code.
+4. Set ELEVENLABS_VOICE_ID_SERIES_5 to the voice chosen for this series.
+5. Do not run schema.sql against the live database.
+6. Reload the web app. The existing non-destructive migration will unlock Series 5
+   without deleting profiles or previously earned badges.

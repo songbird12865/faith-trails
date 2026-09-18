@@ -31,12 +31,25 @@ def text_hash(text):
     return hashlib.sha256(text.encode("utf-8")).hexdigest()[:10]
 
 
-def narration_filename(key, text):
-    """Build a human-readable, content-addressed MP3 filename."""
-    return f"{key}__{text_hash(text)}.mp3"
+def narration_filename(key, text, voice_id=None, legacy_voice_id=None):
+    """Build a content-addressed MP3 filename for both text and voice.
+
+    Files made with the original Faith-Trails voice keep their historic names,
+    so an existing narration library is still reusable. Choosing a different
+    voice adds a short voice fingerprint and creates a separate safe cache.
+    """
+    voice_suffix = ""
+    if voice_id and voice_id != legacy_voice_id:
+        voice_suffix = f"__voice-{text_hash(voice_id)[:8]}"
+    return f"{key}{voice_suffix}__{text_hash(text)}.mp3"
 
 
-def build_narration_index(quest_content):
+def build_narration_index(
+    quest_content,
+    quest_series=None,
+    series_voice_ids=None,
+    legacy_voice_id=None,
+):
     """
     Mutates quest_content in place, attaching a "narration_file" key to
     every narratable item. Returns a flat list of
@@ -45,26 +58,37 @@ def build_narration_index(quest_content):
     """
     index = []
 
-    def register(item, key, text_field):
+    quest_series = quest_series or {}
+    series_voice_ids = series_voice_ids or {}
+
+    def register(item, key, text_field, series_number):
         # Mutating the source dictionary deliberately keeps the generated
         # filename beside the exact content that the browser later receives.
         text = item[text_field]
-        filename = narration_filename(key, text)
+        voice_id = series_voice_ids.get(series_number, legacy_voice_id)
+        filename = narration_filename(key, text, voice_id, legacy_voice_id)
         item["narration_file"] = filename
-        index.append({"key": key, "text": text, "filename": filename})
+        index.append({
+            "key": key,
+            "text": text,
+            "filename": filename,
+            "series_number": series_number,
+            "voice_id": voice_id,
+        })
 
     for slug, quest in quest_content.items():
+        series_number = quest_series.get(slug, 1)
 
         for i, scene in enumerate(quest.get("intro_scenes", [])):
-            register(scene, f"{slug}__intro__{i}", "text")
+            register(scene, f"{slug}__intro__{i}", "text", series_number)
 
         for i, scene in enumerate(quest.get("outro_scenes", [])):
-            register(scene, f"{slug}__outro__{i}", "text")
+            register(scene, f"{slug}__outro__{i}", "text", series_number)
 
         interactive = quest.get("interactive_by_difficulty", {})
         for diff in DIFFICULTIES:
             if diff in interactive:
-                register(interactive[diff], f"{slug}__interactive__{diff}", "prompt")
+                register(interactive[diff], f"{slug}__interactive__{diff}", "prompt", series_number)
 
         quiz_bank = quest.get("quiz_bank_by_difficulty", {})
         for diff in DIFFICULTIES:
@@ -74,20 +98,25 @@ def build_narration_index(quest_content):
                 # the prompt with no choices.
                 option_list = ". Or ".join(q["options"])
                 q["_narration_text"] = f"{q['prompt']} Is it: {option_list}?"
-                register(q, f"{slug}__quiz__{diff}__{i}", "_narration_text")
+                register(q, f"{slug}__quiz__{diff}__{i}", "_narration_text", series_number)
 
         verse_bank = quest.get("verse_bank_by_difficulty", {})
         for diff in DIFFICULTIES:
             for i, v in enumerate(verse_bank.get(diff, [])):
-                register(v, f"{slug}__verse__{diff}__{i}", "verse")
+                register(v, f"{slug}__verse__{diff}__{i}", "verse", series_number)
 
         if "lesson" in quest:
-            filename = narration_filename(f"{slug}__lesson", quest["lesson"])
+            voice_id = series_voice_ids.get(series_number, legacy_voice_id)
+            filename = narration_filename(
+                f"{slug}__lesson", quest["lesson"], voice_id, legacy_voice_id
+            )
             quest["lesson_narration_file"] = filename
             index.append({
                 "key": f"{slug}__lesson",
                 "text": quest["lesson"],
                 "filename": filename,
+                "series_number": series_number,
+                "voice_id": voice_id,
             })
 
     return index

@@ -11,14 +11,15 @@ the filenames this script generates are GUARANTEED to match what
 quest.html expects to find in static/audio/quests/. There's no separate
 copy of this logic to keep in sync.
 
-CACHING: each filename includes a hash of its text. Re-running this after
-only adding one new quest regenerates just the new content -- everything
-else is skipped.
+CACHING: each filename includes a hash of its text and, when a series uses a
+different narrator, a fingerprint of that voice. Re-running this after only
+adding content or changing one series voice regenerates only those files.
 
 SETUP
 1. pip install requests
 2. Set ELEVENLABS_API_KEY as an environment variable.
-3. VOICE_ID below should be your saved narrator voice's ID.
+3. Set ELEVENLABS_VOICE_ID_SERIES_1, ELEVENLABS_VOICE_ID_SERIES_2, and so on
+   to the saved voice IDs you want. ELEVENLABS_VOICE_ID remains the fallback.
 4. Run from your project root (same folder as app.py):
        python scripts/generate_narration.py
 """
@@ -33,11 +34,9 @@ sys.path.insert(0, PROJECT_ROOT)
 
 from app import NARRATION_INDEX  # noqa: E402
 
-# ---- CONFIG -----------------------------------------------------------
+# CONFIG
 
 API_KEY = os.environ.get("ELEVENLABS_API_KEY")
-VOICE_ID = "Q4oILuo4P8VeXtE6FMLI"
-
 MODEL_ID = "eleven_multilingual_v2"
 
 OUTPUT_DIR = os.path.join(
@@ -54,9 +53,9 @@ VOICE_SETTINGS = {
 # ---- SCRIPT LOGIC -------------------------------------------------------
 
 
-def generate_audio(text, out_path):
+def generate_audio(text, out_path, voice_id):
     """Request one MP3 from ElevenLabs and write it to the cache path."""
-    url = f"https://api.elevenlabs.io/v1/text-to-speech/{VOICE_ID}"
+    url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
     headers = {
         "xi-api-key": API_KEY,
         "Content-Type": "application/json"
@@ -85,10 +84,6 @@ def main():
     if not API_KEY:
         print("ELEVENLABS_API_KEY environment variable is not set. Stopping.")
         return
-    if not VOICE_ID or VOICE_ID == "PASTE_YOUR_SAVED_VOICE_ID_HERE":
-        print("Set VOICE_ID to your saved narrator voice's ID before running.")
-        return
-
     print(f"Found {len(NARRATION_INDEX)} narratable pieces of content.\n")
 
     generated = 0
@@ -103,8 +98,13 @@ def main():
             skipped += 1
             continue
 
-        print(f"[gen]   {item['key']} ...")
-        success = generate_audio(item["text"], out_path)
+        voice_id = item.get("voice_id")
+        if not voice_id or voice_id == "PASTE_YOUR_SAVED_VOICE_ID_HERE":
+            print(f"[skip]  {item['key']} has no valid Series {item.get('series_number')} voice ID")
+            continue
+
+        print(f"[gen]   Series {item['series_number']} · {item['key']} ...")
+        success = generate_audio(item["text"], out_path, voice_id)
         if success:
             generated += 1
             time.sleep(0.5)

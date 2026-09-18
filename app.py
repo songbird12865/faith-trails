@@ -24,10 +24,63 @@ from narration_utils import build_narration_index, narration_filename
 BASE_DIR = Path(__file__).resolve().parent
 DB_PATH = str(BASE_DIR / "faith_trails.db")
 DIFFICULTIES = ("easy", "medium", "hard")
+DEFAULT_ELEVENLABS_VOICE_ID = "Q4oILuo4P8VeXtE6FMLI"
+
+SERIES = (
+    {"number": 1, "title": "God's Rescue & New Beginnings"},
+    {"number": 2, "title": "Family & Trust"},
+    {"number": 3, "title": "Courage & Leadership"},
+    {"number": 4, "title": "Wisdom & Faithfulness"},
+    {"number": 5, "title": "Jesus & the Good News"},
+)
+
+# The complete 25-adventure roadmap. Existing slugs never change, so badges
+# already earned for Noah, Joseph, Moses, David, Jonah, or Daniel stay linked.
+QUEST_CATALOG = (
+    ("creation", "Creation", "Discover how God created a beautiful world.", "🌍", 1, 1, 1),
+    ("noahs-ark", "Noah's Ark", "Help gather the animals two by two!", "🐘", 2, 1, 1),
+    ("jonah-big-fish", "Jonah and the Big Fish", "Follow Jonah through a wild, watery rescue.", "🐋", 3, 1, 1),
+    ("daniel-lions-den", "Daniel and the Lions' Den", "Stay brave through a scary night.", "🦁", 4, 1, 1),
+    ("red-sea", "Moses and the Red Sea", "Watch God rescue His people and part the sea.", "🌊", 5, 1, 1),
+    ("josephs-coat", "Joseph's Colorful Coat", "Learn how God remained with Joseph.", "🧥", 1, 2, 1),
+    ("abraham", "Abraham", "Trust God's promises, even while waiting.", "⭐", 2, 2, 1),
+    ("jacob", "Jacob", "See how God changed Jacob's heart and future.", "🪜", 3, 2, 1),
+    ("ruth", "Ruth", "Walk with Ruth in loyalty, kindness, and trust.", "🌾", 4, 2, 1),
+    ("samuel", "Samuel", "Listen for God's voice with young Samuel.", "🕯️", 5, 2, 1),
+    ("david-goliath", "David & Goliath", "A young shepherd trusts God and faces a giant.", "🪨", 1, 3, 1),
+    ("apostles-pentecost", "The Apostles and Pentecost", "Filled with the Holy Spirit, they boldly share the good news.", "🔥", 2, 3, 1),
+    ("gideon", "Gideon", "Discover how God works through a small, faithful army.", "🏺", 3, 3, 1),
+    ("esther", "Esther", "See how Esther courageously speaks for her people.", "👑", 4, 3, 1),
+    ("jericho", "The Battle of Jericho", "Follow God's unusual plan with courage and faith.", "🎺", 5, 3, 1),
+    ("solomon", "Solomon", "Ask God for wisdom like King Solomon.", "⚖️", 1, 4, 1),
+    ("ten-commandments", "The Ten Commandments", "Learn the loving instructions God gave His people.", "📜", 2, 4, 1),
+    ("elijah", "Elijah", "Stand faithfully for God on Mount Carmel.", "🔥", 3, 4, 1),
+    ("nehemiah", "Nehemiah", "Help rebuild Jerusalem's wall with prayer and perseverance.", "🧱", 4, 4, 1),
+    ("job", "Job", "Hold on to faith when life is difficult.", "🙏", 5, 4, 1),
+    ("nativity", "The Nativity", "Celebrate the birth of Jesus, God's promised Son.", "⭐", 1, 5, 1),
+    ("beatitudes", "Jesus' Teachings: The Beatitudes", "Learn Jesus' surprising picture of a blessed life.", "⛰️", 2, 5, 1),
+    ("good-samaritan", "The Good Samaritan", "Discover what it means to love your neighbor.", "❤️", 3, 5, 1),
+    ("feeding-5000", "Feeding the 5,000", "See Jesus multiply five loaves and two fish.", "🐟", 4, 5, 1),
+    ("easter", "Easter", "Follow the story of Jesus' death and resurrection.", "✝️", 5, 5, 1),
+)
+
+# A series can have its own narrator. If a series-specific variable is absent,
+# it inherits ELEVENLABS_VOICE_ID, then the original Faith-Trails voice.
+QUEST_SERIES = {item[0]: item[5] for item in QUEST_CATALOG}
+FALLBACK_VOICE_ID = os.environ.get(
+    "ELEVENLABS_VOICE_ID", DEFAULT_ELEVENLABS_VOICE_ID
+)
+SERIES_VOICE_IDS = {
+    series["number"]: os.environ.get(
+        f"ELEVENLABS_VOICE_ID_SERIES_{series['number']}", FALLBACK_VOICE_ID
+    )
+    for series in SERIES
+}
 
 app = Flask(__name__)
 # Needed for Flask's session cookie (tracks which player is logged in).
 app.secret_key = os.environ.get("FAITH_TRAILS_SECRET_KEY", "faith-trails-local-development-key-change-in-production")
+_CATALOG_READY_DATABASES = set()
 
 
 # Database helpers
@@ -48,6 +101,43 @@ def close_db(exception=None):
         db.close()
 
 
+@app.before_request
+def keep_quest_catalog_current():
+    """Apply the non-destructive series migration to the active database.
+
+    Existing quest IDs and badge rows are preserved. New roadmap quests are
+    inserted as locked placeholders until their full content is ready.
+    """
+    if DB_PATH in _CATALOG_READY_DATABASES:
+        return
+    db = get_db()
+    columns = {row[1] for row in db.execute("PRAGMA table_info(quests)").fetchall()}
+    if "series_number" not in columns:
+        db.execute("ALTER TABLE quests ADD COLUMN series_number INTEGER NOT NULL DEFAULT 1")
+    if "series_order" not in columns:
+        db.execute("ALTER TABLE quests ADD COLUMN series_order INTEGER NOT NULL DEFAULT 1")
+
+    for slug, title, summary, icon, series_order, series_number, available in QUEST_CATALOG:
+        db.execute(
+            """
+            INSERT INTO quests
+                (slug, title, summary, icon, sort_order, is_available, series_number, series_order)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(slug) DO UPDATE SET
+                title = excluded.title,
+                summary = excluded.summary,
+                icon = excluded.icon,
+                sort_order = excluded.sort_order,
+                is_available = excluded.is_available,
+                series_number = excluded.series_number,
+                series_order = excluded.series_order
+            """,
+            (slug, title, summary, icon, series_order, available, series_number, series_order),
+        )
+    db.commit()
+    _CATALOG_READY_DATABASES.add(DB_PATH)
+
+
 
 # Each quest contains story scenes, an activity, quizzes, and a memory verse.
 # Difficulty changes the activities and questions, but not the Bible story.
@@ -55,6 +145,69 @@ def close_db(exception=None):
 
 
 QUEST_CONTENT = {
+    # Creation begins the first series with God's good and ordered world.
+    "creation":
+    {
+        "title": "Creation",
+        "intro_scenes": [
+            {"type": "story", "emoji": "✨", "text": "In the beginning, God created the heavens and the earth. The earth was dark and empty, but God was there."},
+            {"type": "story", "emoji": "☀️", "text": "God said, 'Let there be light,' and light appeared. God separated the light from the darkness."},
+            {"type": "story", "emoji": "🌊", "text": "God made the sky, gathered the waters, and brought up dry land. He filled the land with plants and trees."},
+            {"type": "story", "emoji": "🌙", "text": "God placed the sun, moon, and stars in the sky to mark days, seasons, and years."},
+        ],
+        "interactive_by_difficulty": {
+            "easy": {"type": "interactive", "subtype": "sequence", "prompt": "Tap these parts of creation in the order they appear in the story!", "items": [
+                {"id": "light", "emoji": "✨", "label": "Light"},
+                {"id": "sky", "emoji": "☁️", "label": "Sky"},
+                {"id": "land", "emoji": "🌱", "label": "Land and plants"},
+            ]},
+            "medium": {"type": "interactive", "subtype": "sequence", "prompt": "Put these parts of creation in Bible-story order!", "items": [
+                {"id": "light", "emoji": "✨", "label": "Light"},
+                {"id": "sky", "emoji": "☁️", "label": "Sky"},
+                {"id": "land", "emoji": "🌱", "label": "Land and plants"},
+                {"id": "lights", "emoji": "☀️", "label": "Sun, moon, and stars"},
+                {"id": "animals", "emoji": "🐘", "label": "Animals"},
+            ]},
+            "hard": {"type": "interactive", "subtype": "sequence", "prompt": "Arrange all seven days in the correct order!", "items": [
+                {"id": "light", "emoji": "✨", "label": "Light and darkness"},
+                {"id": "sky", "emoji": "☁️", "label": "Sky"},
+                {"id": "land", "emoji": "🌱", "label": "Land, seas, and plants"},
+                {"id": "lights", "emoji": "☀️", "label": "Sun, moon, and stars"},
+                {"id": "sea-sky", "emoji": "🐟", "label": "Sea creatures and birds"},
+                {"id": "people", "emoji": "👨‍👩‍👧‍👦", "label": "Land animals and people"},
+                {"id": "rest", "emoji": "🕊️", "label": "God rested"},
+            ]},
+        },
+        "outro_scenes": [
+            {"type": "story", "emoji": "🐋", "text": "God filled the seas with living creatures and the sky with birds. Then He made every kind of land animal."},
+            {"type": "story", "emoji": "👨‍👩‍👧‍👦", "text": "God created people in His image and gave them the special responsibility of caring for His world."},
+            {"type": "story", "emoji": "🕊️", "text": "God saw everything He had made, and it was very good. On the seventh day, God rested."},
+        ],
+        "quiz_bank_by_difficulty": {
+            "easy": [
+                {"type": "quiz", "prompt": "Who created the heavens and the earth?", "options": ["God", "Noah", "Moses"], "correct_index": 0},
+                {"type": "quiz", "prompt": "What did God call His finished creation?", "options": ["Very good", "Too small", "Unfinished"], "correct_index": 0},
+                {"type": "quiz", "prompt": "What did God do on the seventh day?", "options": ["He rested", "He made the stars", "He made the sea"], "correct_index": 0},
+            ],
+            "medium": [
+                {"type": "quiz", "prompt": "What was created before the sun, moon, and stars?", "options": ["Light", "People", "Birds"], "correct_index": 0},
+                {"type": "quiz", "prompt": "In whose image were people created?", "options": ["God's image", "The angels' image", "The animals' image"], "correct_index": 0},
+                {"type": "quiz", "prompt": "What responsibility did God give people?", "options": ["Care for His world", "Create another world", "Name the stars"], "correct_index": 0},
+            ],
+            "hard": [
+                {"type": "quiz", "prompt": "On which day were land animals and people created?", "options": ["The sixth day", "The fourth day", "The seventh day"], "correct_index": 0},
+                {"type": "quiz", "prompt": "Which creatures were created on the fifth day?", "options": ["Sea creatures and birds", "People and land animals", "Plants and trees"], "correct_index": 0},
+                {"type": "quiz", "prompt": "What does being made in God's image tell us?", "options": ["Every person has God-given value", "People are exactly like God", "Only some people matter"], "correct_index": 0},
+            ],
+        },
+        "quiz_count_by_difficulty": {"easy": 2, "medium": 3, "hard": 3},
+        "verse_bank_by_difficulty": {
+            "easy": [{"type": "memory_verse", "verse": "In the beginning God created the heavens and the earth.", "reference": "Genesis 1:1", "reference_options": ["Genesis 1:1", "Exodus 1:1", "John 1:10"]}],
+            "medium": [{"type": "memory_verse", "verse": "God saw all that he had made, and it was very good.", "reference": "Genesis 1:31", "reference_options": ["Genesis 1:31", "Genesis 2:31", "Psalm 1:31"]}],
+            "hard": [{"type": "memory_verse", "verse": "The heavens declare the glory of God; the skies proclaim the work of his hands.", "reference": "Psalm 19:1", "reference_options": ["Psalm 19:1", "Psalm 91:1", "Genesis 19:1"]}],
+        },
+        "lesson": "God created a good world, and every person is valuable because we are made in His image.",
+    },
     # Noah's quest teaches obedience and trust.
     "noahs-ark": 
     {
@@ -897,18 +1050,41 @@ QUEST_CONTENT = {
     },
 }
 
+# Series content is kept in focused modules as the app grows.
+from quest_content_series2 import SERIES_2_CONTENT
+from quest_content_series3 import SERIES_3_CONTENT
+from quest_content_series4 import SERIES_4_CONTENT
+from quest_content_series5 import SERIES_5_CONTENT
+
+QUEST_CONTENT.update(SERIES_2_CONTENT)
+QUEST_CONTENT.update(SERIES_3_CONTENT)
+QUEST_CONTENT.update(SERIES_4_CONTENT)
+QUEST_CONTENT.update(SERIES_5_CONTENT)
+
 # Add a narration filename to every spoken part of every quest.
-NARRATION_INDEX = build_narration_index(QUEST_CONTENT)
-CHAMPION_NARRATION_TEXT = (
-    "You followed Noah, Joseph, Moses, David, Jonah, and Daniel through every adventure. "
-    "Each one trusted God in a different way—and now you know that you can trust Him too."
+NARRATION_INDEX = build_narration_index(
+    QUEST_CONTENT,
+    quest_series=QUEST_SERIES,
+    series_voice_ids=SERIES_VOICE_IDS,
+    legacy_voice_id=DEFAULT_ELEVENLABS_VOICE_ID,
 )
-CHAMPION_NARRATION_FILE = narration_filename("faith-trails-champion", CHAMPION_NARRATION_TEXT)
+CHAMPION_NARRATION_TEXT = (
+    "You journeyed through Creation and followed Noah, Jonah, Daniel, and Moses. "
+    "In every adventure, God was faithful—and you learned that you can trust Him too."
+)
+CHAMPION_NARRATION_FILE = narration_filename(
+    "faith-trails-champion",
+    CHAMPION_NARRATION_TEXT,
+    SERIES_VOICE_IDS[1],
+    DEFAULT_ELEVENLABS_VOICE_ID,
+)
 NARRATION_INDEX.append(
     {
     "key": "faith-trails-champion",
     "text": CHAMPION_NARRATION_TEXT,
     "filename": CHAMPION_NARRATION_FILE,
+    "series_number": 1,
+    "voice_id": SERIES_VOICE_IDS[1],
 })
 
 
@@ -928,22 +1104,35 @@ def get_current_user(db):
     ).fetchone()
 
 
-def build_scenes(content, difficulty):
+def build_scenes(content, difficulty, slug=None):
     """Assemble one playthrough's scene list for a given difficulty:
-    fixed intro scenes, the difficulty-scaled interactive checkpoint,
-    fixed outro scenes, a fresh random sample of quiz questions from
-    that difficulty's bank, and one random verse from that difficulty's
-    bank."""
+    the complete Bible story, the difficulty-scaled interactive review,
+    a fresh random sample of quiz questions, and one memory verse. The
+    activity deliberately follows every story scene so it never asks a
+    child to arrange or identify an event that has not been taught yet."""
     # Select the question and verse choices for this difficulty.
     quiz_bank = content["quiz_bank_by_difficulty"][difficulty]
     quiz_count = min(content["quiz_count_by_difficulty"][difficulty], len(quiz_bank))
     verse_bank = content["verse_bank_by_difficulty"][difficulty]
 
+    # Give each story beat its matching optimized illustration when the file is
+    # present. A missing file is deliberately omitted so the browser can keep
+    # using the original quest cover as a safe fallback.
+    story_scenes = [
+        dict(scene)
+        for scene in content["intro_scenes"] + content["outro_scenes"]
+    ]
+    if slug:
+        for index, scene in enumerate(story_scenes, start=1):
+            relative_image = f"{slug}/{index:02}.webp"
+            image_path = BASE_DIR / "static" / "img" / "quests" / "scenes" / relative_image
+            if image_path.exists():
+                scene["image"] = relative_image
+
     # Combine all parts into one ordered adventure.
     return (
-        content["intro_scenes"]
+        story_scenes
         + [content["interactive_by_difficulty"][difficulty]]
-        + content["outro_scenes"]
         + random.sample(quiz_bank, k=quiz_count)
         + [random.choice(verse_bank)]
     )
@@ -1009,7 +1198,7 @@ def home():
 
     # Load the trail and badges for the player's current difficulty.
     quests = db.execute(
-        "SELECT * FROM quests ORDER BY sort_order"
+        "SELECT * FROM quests ORDER BY series_number, series_order"
     ).fetchall()
     earned = {
         row["quest_id"]
@@ -1024,6 +1213,8 @@ def home():
         earned=list(earned),
         profile=profile,
         difficulties=DIFFICULTIES,
+        series=SERIES,
+        champion_narration_file=CHAMPION_NARRATION_FILE,
         initial_quest=None,
     )
 
@@ -1040,7 +1231,7 @@ def badges():
 
     # Load every available quest and its earned date.
     quests = db.execute(
-        "SELECT * FROM quests WHERE is_available = 1 ORDER BY sort_order"
+        "SELECT * FROM quests WHERE is_available = 1 ORDER BY series_number, series_order"
     ).fetchall()
     earned = {
         row["quest_id"]: row["earned_at"]
@@ -1066,7 +1257,7 @@ def hall_of_fame():
 
     # Load badges from all three difficulty levels.
     quests = db.execute(
-        "SELECT * FROM quests ORDER BY sort_order"
+        "SELECT * FROM quests ORDER BY series_number, series_order"
     ).fetchall()
     earned_rows = db.execute(
         "SELECT quest_id, difficulty, earned_at FROM badges_earned WHERE user_id = ?",
@@ -1107,7 +1298,7 @@ def quest(slug):
     if QUEST_CONTENT.get(slug) is None:
         abort(404)
 
-    quests = db.execute("SELECT * FROM quests ORDER BY sort_order").fetchall()
+    quests = db.execute("SELECT * FROM quests ORDER BY series_number, series_order").fetchall()
     earned = {
         row["quest_id"]
         for row in db.execute(
@@ -1121,6 +1312,8 @@ def quest(slug):
         earned=list(earned),
         profile=profile,
         difficulties=DIFFICULTIES,
+        series=SERIES,
+        champion_narration_file=CHAMPION_NARRATION_FILE,
         initial_quest=slug,
     )
 
@@ -1145,7 +1338,7 @@ def api_quest(slug):
     return jsonify({
         "quest": dict(quest_row),
         "difficulty": difficulty,
-        "scenes": build_scenes(content, difficulty),
+        "scenes": build_scenes(content, difficulty, slug),
         "lesson": content["lesson"],
         "lesson_narration_file": content.get("lesson_narration_file"),
     })
@@ -1161,7 +1354,7 @@ def api_progress():
     
     # Return both quest details and all earned badge records.
     quests = [dict(row) for row in db.execute(
-        "SELECT * FROM quests ORDER BY sort_order"
+        "SELECT * FROM quests ORDER BY series_number, series_order"
     ).fetchall()]
     earned = [dict(row) for row in db.execute(
         "SELECT quest_id, difficulty, earned_at FROM badges_earned WHERE user_id = ?",
@@ -1193,7 +1386,7 @@ def api_narration(filename):
     if not api_key:
         return jsonify({"error": "ElevenLabs narration is not configured"}), 503
 
-    voice_id = os.environ.get("ELEVENLABS_VOICE_ID", "Q4oILuo4P8VeXtE6FMLI")
+    voice_id = narration_item["voice_id"]
 
     # Prepare the text and voice settings for ElevenLabs.
     payload = json.dumps({
@@ -1268,7 +1461,7 @@ def api_quests():
     profile = get_current_user(db)
     
     # Load the quest list and the current player's earned badges.
-    quests = db.execute("SELECT * FROM quests ORDER BY sort_order").fetchall()
+    quests = db.execute("SELECT * FROM quests ORDER BY series_number, series_order").fetchall()
     earned = set()
     if profile is not None and profile["current_difficulty"]:
         earned = {
@@ -1285,6 +1478,8 @@ def api_quests():
             "title": q["title"],
             "summary": q["summary"],
             "icon": q["icon"],
+            "series_number": q["series_number"],
+            "series_order": q["series_order"],
             "is_available": bool(q["is_available"]),
             "earned": q["id"] in earned,
         }

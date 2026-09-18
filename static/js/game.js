@@ -6,10 +6,21 @@
   // Read the starting player and quest data supplied by Flask.
   const boot=JSON.parse(document.getElementById('game-bootstrap').textContent);
   const mapView=document.getElementById('map-view'),questView=document.getElementById('quest-view');
-  const state={earned:new Set(boot.earned),quest:null,scenes:[],current:0,lesson:'',lessonNarration:null,narration:null,championKnown:false,championJustUnlocked:false};
+  const state={earned:new Set(boot.earned),quest:null,scenes:[],current:0,lesson:'',lessonNarration:null,narration:null,artRequest:0,championKnown:false,championJustUnlocked:false};
   // Make text safe before placing it inside HTML.
   const esc=s=>String(s??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
   const img=slug=>`/static/img/quests/${slug}.jpg`;
+  // Story scenes can use optimized art from static/img/quests/scenes.
+  // The original cover remains the automatic fallback.
+  const sceneImg=scene=>scene?.type==='story'&&scene.image
+    ? `/static/img/quests/scenes/${String(scene.image).replace(/^\/+/, '')}`
+    : img(state.quest.slug);
+  const seriesOneComplete=data=>
+  {
+    const firstSeries=data.quests.filter(q=>q.series_number===1);
+    const earnedKeys=new Set(data.earned.map(e=>`${e.quest_id}:${e.difficulty}`));
+    return firstSeries.length===5&&firstSeries.every(q=>boot.difficulties.every(level=>earnedKeys.has(`${q.id}:${level}`)));
+  };
   // Create reusable buttons and short pop-up messages.
   const button=(label,fn,kind='primary-button')=>{const b=document.createElement('button');b.className=kind;b.textContent=label;b.onclick=fn;return b};
   const toast=msg=>{const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1800)};
@@ -21,13 +32,19 @@
   function renderMap()
   {
     history.replaceState({view:'map'},'', '/');
-    mapView.innerHTML=`<div class="hero trail-map-heading"><div class="hero-kicker">${esc(boot.profile.current_difficulty)} adventure</div><h1>Your Faith Trail</h1><p>Follow the winding path, choose a Bible adventure, and collect every badge!</p><div class="choice-grid" id="difficulty-picker"></div></div><div class="faith-trail-map" id="faith-trail-map"><div class="trail-forest-glow" aria-hidden="true"></div><svg class="journey-svg" id="journey-svg" aria-hidden="true"><path id="journey-shadow"></path><path id="journey-line"></path></svg><div class="trail-stops">${boot.quests.map((q,i)=>`<div class="trail-stop trail-stop--${i%2?'right':'left'}" style="--stop-delay:${.45+i*.16}s"><button class="adventure-stop ${q.is_available?'':'locked'} ${state.earned.has(q.id)?'earned':''}" data-slug="${esc(q.slug)}" aria-label="${esc(q.title)}${q.is_available?'':' — coming soon'}"><span class="stop-ring"><img src="${img(q.slug)}" alt=""><span class="stop-number">${q.sort_order}</span>${state.earned.has(q.id)?'<span class="stop-earned" aria-label="Badge earned">✓</span>':''}${q.is_available?'':'<span class="stop-lock">🔒</span>'}</span><span class="stop-sign"><strong>${esc(q.title)}</strong><small>${esc(q.summary)}</small></span></button></div>`).join('')}</div><div class="trail-finish" aria-hidden="true">🏁</div></div>`;
+    const seriesMarkup=boot.series.map(series=>
+    {
+      const quests=boot.quests.filter(q=>q.series_number===series.number);
+      const available=quests.filter(q=>q.is_available).length;
+      return `<section class="series-chapter" data-series="${series.number}"><header class="series-heading"><span>Series ${series.number}</span><h2>${esc(series.title)}</h2><p>${available} of 5 adventures ready</p></header>${quests.map((q,i)=>`<div class="trail-stop trail-stop--${i%2?'right':'left'}" style="--stop-delay:${.25+(q.series_number-1)*.08+i*.1}s"><button class="adventure-stop ${q.is_available?'':'locked'} ${state.earned.has(q.id)?'earned':''}" data-slug="${esc(q.slug)}" aria-label="${esc(q.title)}${q.is_available?'':' — coming soon'}"><span class="stop-ring"><span class="quest-icon-fallback" aria-hidden="true">${q.icon}</span><img src="${img(q.slug)}" alt="" onerror="this.style.display='none'"><span class="stop-number">${q.series_number}.${q.series_order}</span>${state.earned.has(q.id)?'<span class="stop-earned" aria-label="Badge earned">✓</span>':''}${q.is_available?'':'<span class="stop-lock">🔒</span>'}</span><span class="stop-sign"><strong>${esc(q.title)}</strong><small>${esc(q.summary)}</small></span></button></div>`).join('')}</section>`;
+    }).join('');
+    mapView.innerHTML=`<div class="hero trail-map-heading"><div class="hero-kicker">${esc(boot.profile.current_difficulty)} adventure</div><h1>Your Faith Trail</h1><p>Explore five themed series, complete 25 Bible adventures, and collect all 75 badges!</p><div class="choice-grid" id="difficulty-picker"></div></div><div class="faith-trail-map" id="faith-trail-map"><div class="trail-forest-glow" aria-hidden="true"></div><svg class="journey-svg" id="journey-svg" aria-hidden="true"><path id="journey-shadow"></path><path id="journey-line"></path></svg><div class="trail-stops series-trails">${seriesMarkup}</div><div class="trail-finish" aria-hidden="true">🏁</div></div>`;
     const picker=mapView.querySelector('#difficulty-picker');
     boot.difficulties.forEach(level=>{const b=button(level,()=>changeDifficulty(level),'game-choice');if(level===boot.profile.current_difficulty)b.classList.add('correct');picker.appendChild(b)});
     mapView.querySelectorAll('.adventure-stop').forEach(tile=>tile.onclick=()=>{const q=boot.quests.find(x=>x.slug===tile.dataset.slug);q.is_available?openQuest(q.slug):toast('This adventure is coming soon!')});
     // Wait until the markers are visible before drawing the trail.
     requestAnimationFrame(()=>requestAnimationFrame(drawFaithTrail));
-    fetch('/api/progress').then(r=>r.ok?r.json():null).then(data=>{if(data&&data.earned&&data.earned.length>=18){state.championKnown=true;const trail=mapView.querySelector('.faith-trail-map');trail?.classList.add('champion-golden');if(trail&&!trail.querySelector('.champion-map-button')){const b=button('🏆 Grand Champion Celebration',renderChampion,'primary-button champion-map-button');trail.appendChild(b)}drawFaithTrail();}}).catch(()=>{});
+    fetch('/api/progress').then(r=>r.ok?r.json():null).then(data=>{if(data&&seriesOneComplete(data)){state.championKnown=true;const trail=mapView.querySelector('.faith-trail-map');trail?.classList.add('champion-golden');if(trail&&!trail.querySelector('.champion-map-button')){const b=button('🏆 Series 1 Celebration',renderChampion,'primary-button champion-map-button');trail.appendChild(b)}drawFaithTrail();}}).catch(()=>{});
   }
 
   function drawFaithTrail()
@@ -51,7 +68,7 @@
     // Load saved progress for the badge collection or Hall of Fame.
     const r=await fetch('/api/progress');if(!r.ok)return toast('Progress could not be loaded.');const data=await r.json();
     const title=kind==='badges'?'My Badge Collection':'Hall of Fame';
-    mapView.innerHTML=`<div class="hero"><div class="hero-kicker">${esc(boot.profile.name)}’s achievements</div><h1>${title}</h1><p>${kind==='badges'?'Every completed trail adds another badge to your collection.':'All 18 badges across Easy, Medium, and Hard adventures.'}</p><button id="collection-back" class="primary-button">← Back to Trail</button></div><div id="collection-content"></div>`;
+    mapView.innerHTML=`<div class="hero"><div class="hero-kicker">${esc(boot.profile.name)}’s achievements</div><h1>${title}</h1><p>${kind==='badges'?'Every completed trail adds another badge to your collection.':'All 75 badges across Easy, Medium, and Hard adventures.'}</p><button id="collection-back" class="primary-button">← Back to Trail</button></div><div id="collection-content"></div>`;
     const content=mapView.querySelector('#collection-content');
     if(kind==='hall')
       {
@@ -59,7 +76,7 @@
       const levels=['easy','medium','hard'];
       const earnedKeys=new Set(data.earned.map(e=>`${e.quest_id}:${e.difficulty}`));
       const earnedCount=data.earned.filter(e=>levels.includes(e.difficulty)).length;
-      content.innerHTML=`<section class="hof-board"><div class="hof-summary"><strong>${earnedCount} of 18 earned</strong><div class="hof-meter" role="progressbar" aria-label="Hall of Fame badges earned" aria-valuemin="0" aria-valuemax="18" aria-valuenow="${earnedCount}"><span style="width:${earnedCount/18*100}%"></span></div></div><div class="hof-table-wrap"><table class="hof-table"><thead><tr><th scope="col">Adventure</th>${levels.map(level=>`<th scope="col" class="hof-${level}">${level}</th>`).join('')}</tr></thead><tbody>${data.quests.filter(q=>q.is_available).map(q=>`<tr><th scope="row"><img src="${img(q.slug)}" alt=""><span>${esc(q.title)}</span></th>${levels.map(level=>{const earned=earnedKeys.has(`${q.id}:${level}`);return `<td><span class="hof-badge hof-badge--${level} ${earned?'is-earned':'is-waiting'}" aria-label="${esc(q.title)} ${level} badge ${earned?'earned':'not earned'}"><img src="${img(q.slug)}" alt="" aria-hidden="true"><span>${earned?'✓':'☆'}</span></span></td>`}).join('')}</tr>`).join('')}</tbody></table></div><div class="hof-legend"><span><i class="hof-dot hof-dot--easy"></i>Easy · Bronze</span><span><i class="hof-dot hof-dot--medium"></i>Medium · Silver</span><span><i class="hof-dot hof-dot--hard"></i>Hard · Gold</span></div></section>`;
+      content.innerHTML=`<section class="hof-board"><div class="hof-summary"><strong>${earnedCount} of 75 earned</strong><div class="hof-meter" role="progressbar" aria-label="Hall of Fame badges earned" aria-valuemin="0" aria-valuemax="75" aria-valuenow="${earnedCount}"><span style="width:${earnedCount/75*100}%"></span></div></div><div class="hof-table-wrap"><table class="hof-table"><thead><tr><th scope="col">Adventure</th>${levels.map(level=>`<th scope="col" class="hof-${level}">${level}</th>`).join('')}</tr></thead><tbody>${data.quests.map(q=>`<tr class="${q.is_available?'':'hof-coming-soon'}"><th scope="row"><span class="hof-quest-icon">${q.icon}</span><span>${esc(q.title)}${q.is_available?'':' · Coming soon'}</span></th>${levels.map(level=>{const earned=earnedKeys.has(`${q.id}:${level}`);return `<td><span class="hof-badge hof-badge--${level} ${earned?'is-earned':'is-waiting'}" aria-label="${esc(q.title)} ${level} badge ${earned?'earned':'not earned'}"><span>${earned?'✓':'☆'}</span></span></td>`}).join('')}</tr>`).join('')}</tbody></table></div><div class="hof-legend"><span><i class="hof-dot hof-dot--easy"></i>Easy · Bronze</span><span><i class="hof-dot hof-dot--medium"></i>Medium · Silver</span><span><i class="hof-dot hof-dot--hard"></i>Hard · Gold</span></div></section>`;
       }
     else
       {
@@ -84,7 +101,7 @@
         {
         const progress=await progressResponse.json();
         state.earned=new Set(progress.earned.filter(e=>e.difficulty===level).map(e=>e.quest_id));
-        state.championKnown=progress.earned.length>=18;
+        state.championKnown=seriesOneComplete(progress);
         }
     }
     catch(e){}
@@ -100,10 +117,30 @@
     transition(mapView,questView,()=>{});
     const r=await fetch(`/api/quest/${slug}`);if(!r.ok){showMap();return toast('That quest could not be loaded.')}
     const data=await r.json();state.quest=data.quest;state.scenes=data.scenes;state.lesson=data.lesson;state.lessonNarration=data.lesson_narration_file;state.current=0;
-    if(push)history.pushState({view:'quest',slug},'',`/quest/${slug}`);renderQuestShell();renderScene();
+    if(push)history.pushState({view:'quest',slug},'',`/quest/${slug}`);renderQuestShell();preloadNextSceneImage(-1);renderScene();
   }
   // Create the shared screen used by every quest.
-  function renderQuestShell(){questView.innerHTML=`<article class="quest-stage"><img class="quest-art-backdrop" src="${img(state.quest.slug)}" alt=""><img class="quest-art" src="${img(state.quest.slug)}" alt="${esc(state.quest.title)}"><div class="quest-art-shade"></div><div class="quest-top"><button class="glass-button" id="map-back">← Trail Map</button><span class="difficulty-pill">${esc(boot.profile.current_difficulty)}</span></div><div class="scene-panel"><div class="progress-track"><div id="progress-fill" class="progress-fill"></div></div><div id="scene-content" class="scene-content"></div><div id="scene-controls" class="scene-controls"></div></div></article>`;questView.querySelector('#map-back').onclick=showMap}
+  function renderQuestShell(){const cover=img(state.quest.slug);questView.innerHTML=`<article class="quest-stage"><img class="quest-art-backdrop" src="${cover}" data-art-src="${cover}" alt="" decoding="async"><img class="quest-art" src="${cover}" data-art-src="${cover}" alt="${esc(state.quest.title)}" decoding="async"><div class="quest-art-shade"></div><div class="quest-top"><button class="glass-button" id="map-back">← Trail Map</button><span class="difficulty-pill">${esc(boot.profile.current_difficulty)}</span></div><div class="scene-panel"><div class="progress-track"><div id="progress-fill" class="progress-fill"></div></div><div id="scene-content" class="scene-content"></div><div id="scene-controls" class="scene-controls"></div></div></article>`;questView.querySelector('#map-back').onclick=showMap}
+  // Load the next distinct story illustration early to avoid a blank flash.
+  function preloadNextSceneImage(fromIndex)
+  {
+    const current=fromIndex>=0?sceneImg(state.scenes[fromIndex]):null;
+    const next=state.scenes.slice(fromIndex+1).find(scene=>scene.type==='story'&&scene.image&&sceneImg(scene)!==current);
+    if(next){const preload=new Image();preload.src=sceneImg(next)}
+  }
+  // Crossfade to scene artwork, preserving the cover if a file is unavailable.
+  function updateSceneArtwork(scene)
+  {
+    const art=questView.querySelector('.quest-art'),backdrop=questView.querySelector('.quest-art-backdrop');if(!art||!backdrop)return;
+    const cover=img(state.quest.slug),requested=sceneImg(scene),requestId=++state.artRequest;
+    if(art.dataset.artSrc===requested){preloadNextSceneImage(state.current);return}
+    art.classList.add('is-changing');backdrop.classList.add('is-changing');
+    const loader=new Image();
+    const apply=url=>{if(requestId!==state.artRequest)return;art.src=url;backdrop.src=url;art.dataset.artSrc=url;backdrop.dataset.artSrc=url;art.alt=scene?.type==='story'&&scene.image?`${state.quest.title} story illustration`:state.quest.title;requestAnimationFrame(()=>{art.classList.remove('is-changing');backdrop.classList.remove('is-changing')});preloadNextSceneImage(state.current)};
+    loader.onload=()=>apply(requested);
+    loader.onerror=()=>apply(cover);
+    loader.src=requested;
+  }
   // Stop narration and return the player to the trail map.
   function showMap(){stopNarration();history.pushState({view:'map'},'', '/');transition(questView,mapView,renderMap)}
   // Move forward by one scene.
@@ -114,7 +151,7 @@
     const content=document.getElementById('scene-content'),controls=document.getElementById('scene-controls');if(!content)return;
     content.innerHTML='';controls.innerHTML='';document.getElementById('progress-fill').style.width=`${Math.min(100,(state.current/(state.scenes.length||1))*100)}%`;
     if(state.current>=state.scenes.length)return completeQuest();
-    const s=state.scenes[state.current];playNarration(s.narration_file,s._narration_text||s.text||s.prompt||s.verse);
+    const s=state.scenes[state.current];updateSceneArtwork(s);playNarration(s.narration_file,s._narration_text||s.text||s.prompt||s.verse);
     // Choose the matching renderer from the scene data.
     if(s.type==='story')renderStory(s,content,controls);else if(s.type==='quiz')renderQuiz(s,content);else if(s.type==='memory_verse')renderVerse(s,content,controls);else if(s.subtype==='matching')renderMatching(s,content,controls);else if(s.subtype==='color_picker')renderColors(s,content,controls);else if(s.subtype==='sequence')renderSequence(s,content,controls);
   }
@@ -155,31 +192,31 @@
     await fetch(`/api/complete/${state.quest.slug}`,{method:'POST'}).catch(()=>{});
     state.earned.add(state.quest.id);
     const progress=await fetch('/api/progress').then(r=>r.ok?r.json():null).catch(()=>null);
-    // Use saved progress to decide whether all 18 badges are complete.
-    const nowChampion=Boolean(progress&&progress.earned&&progress.earned.length>=18);
+    // Use saved progress to decide whether all 15 Series 1 badges are complete.
+    const nowChampion=Boolean(progress&&seriesOneComplete(progress));
     state.championJustUnlocked=nowChampion&&!state.championKnown;
     state.championKnown=nowChampion;
     openCelebration();
   }
   // Open the badge celebration after a quest is completed.
-  function openCelebration(){const o=document.getElementById('badge-overlay'),continueButton=document.getElementById('celebration-continue');document.getElementById('celebration-badge').textContent=state.quest.icon||'🏅';document.getElementById('celebration-copy').textContent=`You earned the ${boot.profile.current_difficulty} ${state.quest.title} badge! ${state.lesson}`;continueButton.textContent=state.championJustUnlocked?'See Your Grand Celebration!':'Return to the Trail';o.classList.add('open');o.setAttribute('aria-hidden','false');window.FaithTrailsAudio?.celebrate();confetti()}
+  function openCelebration(){const o=document.getElementById('badge-overlay'),continueButton=document.getElementById('celebration-continue');document.getElementById('celebration-badge').textContent=state.quest.icon||'🏅';document.getElementById('celebration-copy').textContent=`You earned the ${boot.profile.current_difficulty} ${state.quest.title} badge! ${state.lesson}`;continueButton.textContent=state.championJustUnlocked?'See Your Series 1 Celebration!':'Return to the Trail';o.classList.add('open');o.setAttribute('aria-hidden','false');window.FaithTrailsAudio?.celebrate();confetti()}
   // Continue to the Champion screen or return to the trail.
   document.getElementById('celebration-continue').onclick=()=>{const o=document.getElementById('badge-overlay');o.classList.remove('open');o.setAttribute('aria-hidden','true');if(state.championJustUnlocked){state.championJustUnlocked=false;transition(questView,mapView,renderChampion)}else{window.FaithTrailsAudio?.gameplay();showMap()}};
 
   function renderChampion()
   {
-    // Show the final reward after all 18 badges are earned.
+    // Show the first themed-series reward after all 15 Series 1 badges are earned.
     history.replaceState({view:'champion'},'', '/');
     window.FaithTrailsAudio?.celebrate();
-    mapView.innerHTML=`<section class="grand-champion-screen"><canvas id="grand-confetti"></canvas><div class="golden-trail-intro" id="golden-trail-intro"><p class="champion-kicker">ALL 18 BADGES EARNED</p><h1>Your Whole Faith Trail Is Turning Gold!</h1><svg viewBox="0 0 700 230" aria-hidden="true"><path id="grand-trail-shadow" d="M40 45 C170 5 190 100 335 55 S545 15 655 70 C565 125 440 90 340 150 S145 215 45 165"/><path id="grand-trail-line" d="M40 45 C170 5 190 100 335 55 S545 15 655 70 C565 125 440 90 340 150 S145 215 45 165"/></svg><div class="grand-mini-badges">${Array.from({length:18},(_,i)=>`<span style="--badge-delay:${.45+i*.08}s">${['🌧️','🧥','🌊','🪨','🐋','🦁'][i%6]}</span>`).join('')}</div></div><div class="champion-final-card" id="champion-final-card" hidden><div class="grand-trophy">🏆</div><p class="champion-kicker">YOU DID IT!</p><h1>Faith-Trails Champion</h1><h2>All 18 badges earned!</h2><p class="champion-inscription">You have learned that God is Faithful through every journey!</p><div class="champion-message"><button id="hear-champion" class="champion-sound-button">🔊 Hear Your Champion Message</button><p>You followed Noah, Joseph, Moses, David, Jonah, and Daniel through every adventure. Each one trusted God in a different way—and now you know that you can trust Him too.</p><blockquote>“Trust in the Lord with all your heart.”<br><strong>— Proverbs 3:5</strong></blockquote></div><p class="champion-traits">You showed courage like David, faithfulness like Daniel, obedience like Jonah, trust like Joseph, bravery like Moses, and perseverance like Noah.</p><div class="champion-actions"><button id="view-certificate" class="primary-button">📜 My Certificate</button><button id="design-badge" class="primary-button">🎨 Secret Badge Designer</button><button id="champion-home" class="primary-button champion-quiet">Return to My Golden Trail</button></div></div></section>`;
+    mapView.innerHTML=`<section class="grand-champion-screen"><canvas id="grand-confetti"></canvas><div class="golden-trail-intro" id="golden-trail-intro"><p class="champion-kicker">ALL 15 SERIES 1 BADGES EARNED</p><h1>Your First Faith Trail Is Turning Gold!</h1><svg viewBox="0 0 700 230" aria-hidden="true"><path id="grand-trail-shadow" d="M40 45 C170 5 190 100 335 55 S545 15 655 70 C565 125 440 90 340 150 S145 215 45 165"/><path id="grand-trail-line" d="M40 45 C170 5 190 100 335 55 S545 15 655 70 C565 125 440 90 340 150 S145 215 45 165"/></svg><div class="grand-mini-badges">${Array.from({length:15},(_,i)=>`<span style="--badge-delay:${.45+i*.08}s">${['🌍','🐘','🐋','🦁','🌊'][i%5]}</span>`).join('')}</div></div><div class="champion-final-card" id="champion-final-card" hidden><div class="grand-trophy">🏆</div><p class="champion-kicker">YOU DID IT!</p><h1>Series 1 Champion</h1><h2>All 15 badges earned!</h2><p class="champion-inscription">You discovered God's rescue and new beginnings!</p><div class="champion-message"><button id="hear-champion" class="champion-sound-button">🔊 Hear Your Champion Message</button><p>You journeyed through Creation and followed Noah, Jonah, Daniel, and Moses. In every adventure, God was faithful—and you learned that you can trust Him too.</p><blockquote>“Trust in the Lord with all your heart.”<br><strong>— Proverbs 3:5</strong></blockquote></div><p class="champion-traits">You explored God's good creation, persevered like Noah, learned obedience with Jonah, showed faithfulness like Daniel, and discovered God's rescue with Moses.</p><div class="champion-actions"><button id="view-certificate" class="primary-button">📜 My Certificate</button><button id="design-badge" class="primary-button">🎨 Secret Badge Designer</button><button id="champion-home" class="primary-button champion-quiet">Return to My Golden Trail</button></div></div></section>`;
     setTimeout(()=>{const intro=document.getElementById('golden-trail-intro'),final=document.getElementById('champion-final-card');if(!intro||!final)return;intro.classList.add('leaving');setTimeout(()=>{intro.hidden=true;final.hidden=false;requestAnimationFrame(()=>final.classList.add('show'));championConfetti()},550)},3500);
-    setTimeout(()=>{document.getElementById('hear-champion')?.addEventListener('click',()=>playNarration('faith-trails-champion__0aaea93170.mp3','You followed Noah, Joseph, Moses, David, Jonah, and Daniel through every adventure. Each one trusted God in a different way, and now you know that you can trust Him too.'));document.getElementById('view-certificate')?.addEventListener('click',renderCertificate);document.getElementById('design-badge')?.addEventListener('click',renderBadgeDesigner);document.getElementById('champion-home')?.addEventListener('click',()=>{window.FaithTrailsAudio?.gameplay();renderMap()})},4200);
+    setTimeout(()=>{document.getElementById('hear-champion')?.addEventListener('click',()=>playNarration(boot.championNarrationFile,'You journeyed through Creation and followed Noah, Jonah, Daniel, and Moses. In every adventure, God was faithful, and you learned that you can trust Him too.'));document.getElementById('view-certificate')?.addEventListener('click',renderCertificate);document.getElementById('design-badge')?.addEventListener('click',renderBadgeDesigner);document.getElementById('champion-home')?.addEventListener('click',()=>{window.FaithTrailsAudio?.gameplay();renderMap()})},4200);
   }
 
   // Build the player's printable completion certificate.
   function renderCertificate()
   {
-    mapView.innerHTML=`<div class="certificate-toolbar"><button id="certificate-back" class="primary-button">← Celebration</button><button id="certificate-print" class="primary-button">🖨️ Print or Save as PDF</button></div><section class="faith-certificate"><div class="certificate-inner"><div class="certificate-compass">🧭</div><p class="certificate-small">Faith-Trails: A Closer Walk for Kids</p><h1>Certificate of Faith and Courage</h1><p>This proudly certifies that</p><div class="certificate-name">${esc(boot.profile.name)}</div><p>completed all 18 Faith-Trails challenges and became a</p><h2>Faith-Trails Champion</h2><div class="certificate-seal">🏆</div><p class="certificate-inscription">You have learned that God is Faithful through every journey!</p><blockquote>“Trust in the Lord with all your heart.” — Proverbs 3:5</blockquote></div></section>`;
+    mapView.innerHTML=`<div class="certificate-toolbar"><button id="certificate-back" class="primary-button">← Celebration</button><button id="certificate-print" class="primary-button">🖨️ Print or Save as PDF</button></div><section class="faith-certificate"><div class="certificate-inner"><div class="certificate-compass">🧭</div><p class="certificate-small">Faith-Trails: A Closer Walk for Kids</p><h1>Certificate of Faith and Courage</h1><p>This proudly certifies that</p><div class="certificate-name">${esc(boot.profile.name)}</div><p>completed all 15 challenges in God’s Rescue &amp; New Beginnings and became a</p><h2>Series 1 Champion</h2><div class="certificate-seal">🏆</div><p class="certificate-inscription">You have learned that God is faithful through every journey!</p><blockquote>“Trust in the Lord with all your heart.” — Proverbs 3:5</blockquote></div></section>`;
     document.getElementById('certificate-back').onclick=renderChampion;document.getElementById('certificate-print').onclick=()=>window.print();
   }
 

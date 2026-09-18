@@ -1,0 +1,51 @@
+FAITH-TRAILS SERIES 3 UPDATE
+============================
+
+This update adds the complete Courage & Leadership series:
+
+1. David & Goliath
+2. The Apostles and Pentecost
+3. Gideon
+4. Esther
+5. The Battle of Jericho
+
+INSTALL OVER YOUR CURRENT FT_DEV PROJECT
+----------------------------------------
+
+1. Stop the local Flask server.
+2. Make a backup copy of your current FT_DEV folder.
+3. Extract this ZIP into FT_DEV and allow Windows to replace matching files.
+4. Keep your existing faith_trails.db. It is intentionally not included in
+   this update ZIP, so your profiles and earned badges are not overwritten.
+5. Open a NEW PowerShell window so your saved setx variables are available.
+6. Change to the project folder and confirm the Series 3 voice is available:
+
+   cd C:\Users\mjhas\OneDrive\FT_DEV
+   $env:ELEVENLABS_VOICE_ID_SERIES_3
+
+7. Generate the new narration. Existing cached Series 1 and 2 files will be
+   skipped automatically:
+
+   python generate_narration.py
+
+8. Start the app:
+
+   python app.py
+
+WHAT IS INCLUDED
+----------------
+
+- Five complete Series 3 quests at Easy, Medium, and Hard
+- Approved, child-sized World English Bible memory passages
+- Story-first sequencing before every interactive activity
+- Six changing illustrations for each Series 3 quest (30 total)
+- Series-specific ElevenLabs voice routing
+- Updated Hall of Fame and badge totals
+- 30 passing automated tests
+
+SECURITY NOTE
+-------------
+
+Do not put any ElevenLabs API key or voice ID directly into a Python file.
+The environment variables you saved with setx are outside this project and
+are not erased when project files are replaced.

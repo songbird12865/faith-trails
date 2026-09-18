@@ -1,131 +1,252 @@
-# Faith-Trails: A Closer Walk for Kids
+# Faith-Trails
 
-**Faith-Trails** is an interactive Bible-learning adventure designed to help children learn about God through stories, quizzes, activities, memory verses, animated scenes, narration, music, and collectible rewards.
+**Faith-Trails: A Closer Walk for Kids** is an interactive Bible-adventure web application designed to help children learn Scripture through narrated stories, activities, quizzes, memory verses, badges, and rewards.
 
-Rather than presenting Bible lessons as static pages, Faith-Trails turns learning into an interactive journey. Children travel along a visual trail, complete Bible-themed quests, earn badges, and unlock special rewards as they progress.
+The completed application contains five themed series, 25 playable quests, and 75 collectible badges. Players complete every quest on Easy, Medium, and Hard to become a Faith-Trails Grand Champion.
 
-The application is built as a continuous single-page game experience so music, narration, animations, and player progress can continue smoothly as the child moves between activities.
+Live application: [faithtrails.acloserwalk.org](https://faithtrails.acloserwalk.org)
 
-## Project Highlights
+## Features
 
-* Interactive Bible-themed quests
-* Multiple difficulty levels
-* Animated story and activity screens
-* Bible quizzes and memory verses
-* Narrated game content
-* Continuous background music
-* Automatic music ducking during narration
-* Player profiles and progress tracking
-* Collectible achievement badges
-* Hall of Fame badge collection
-* Celebration sequences and rewards
-* Responsive interface for desktop and mobile devices
-* Persistent game experience without full-page reloads
+- Five complete Bible-adventure series with five quests each
+- Easy, Medium, and Hard play for every quest
+- 75 total badges with bronze, silver, and gold difficulty levels
+- Six narrated story scenes with changing illustrations in every quest
+- Series-specific ElevenLabs narrators with secure environment-based configuration
+- Narration preloading to reduce pauses between scenes
+- Interactive matching, sequencing, color, quiz, and memory-verse activities
+- Multiple player profiles with saved progress and difficulty selection
+- Animated trail map, badge collection, and 25-row Hall of Fame
+- Continuous gameplay music, narration ducking, and mobile audio permission handling
+- Grand Champion celebration after all 75 badges are earned
+- Golden Trail, printable completion certificate, and downloadable custom badge designer
+- Reusable Grand Champion screen so players can return to their certificate and custom badge
+- Responsive single-page gameplay with animated screen and illustration transitions
 
-## Technologies Used
+## Complete Quest Roadmap
 
-* **Python**
-* **Flask**
-* **HTML5**
-* **CSS3**
-* **JavaScript**
-* **JSON**
-* **SQLite**
-* **ElevenLabs API** for narration
-* **Git & GitHub** for version control
-* **PythonAnywhere** for web deployment
+### Series 1 — God's Rescue and New Beginnings
 
-## Application Design
+1. Creation
+2. Noah's Ark
+3. Jonah and the Big Fish
+4. Daniel and the Lions' Den
+5. Moses and the Red Sea
 
-Faith-Trails uses a Flask backend with a JavaScript-driven single-page game interface.
+### Series 2 — Family and Trust
 
-The browser remains inside one continuous game shell while JavaScript renders the trail map, Bible stories, activities, quizzes, memory verses, badge collection, Hall of Fame, and celebration sequences. This design prevents unnecessary page reloads and allows background music and animations to continue smoothly throughout gameplay.
+1. Joseph's Colorful Coat
+2. Abraham
+3. Jacob
+4. Ruth
+5. Samuel
 
-The backend manages game content, player profiles, difficulty levels, badge persistence, and JSON endpoints used by the front end.
+### Series 3 — Courage and Leadership
 
-## Main Architecture
+1. David and Goliath
+2. The Apostles and Pentecost
+3. Gideon
+4. Esther
+5. The Battle of Jericho
 
-* `templates/game.html` — Permanent game shell
-* `static/js/game.js` — Controls the trail map, story scenes, activities, quizzes, memory verses, badge collection, Hall of Fame, and celebrations
-* `static/js/audio-engine.js` — Manages continuous gameplay music, narration ducking, and music transitions
-* `static/css/style.css` — Responsive game interface, visual styling, and animations
-* `app.py` — Flask application containing quest content, profiles, difficulty handling, badge persistence, and JSON endpoints
-* `static/audio/quests/` — Stores generated narration used throughout the game
+### Series 4 — Wisdom and Faithfulness
 
-## Audio and Narration
+1. Solomon
+2. The Ten Commandments
+3. Elijah
+4. Nehemiah
+5. Job
 
-Faith-Trails incorporates narration and background music to create a more immersive experience for children.
+### Series 5 — Jesus and the Good News
 
-Narration can be generated through the ElevenLabs API and stored with the game's audio assets. During narration, the audio engine automatically lowers the background music so spoken content remains clear. Music returns to its normal level after narration finishes.
+1. The Nativity
+2. Jesus' Teachings: The Beatitudes
+3. The Good Samaritan
+4. Feeding the 5,000
+5. Easter
 
-If narration is unavailable, the game continues normally rather than preventing the child from completing the activity.
+## Technology
 
-## Player Progress and Rewards
+- Python and Flask
+- SQLite
+- HTML and Jinja templates
+- CSS, Tailwind CSS, and responsive design
+- Vanilla JavaScript
+- ElevenLabs text-to-speech narration
+- Optimized WebP scene illustrations
 
-Faith-Trails was designed to encourage children to continue learning by rewarding progress.
+## Project Structure
 
-Players earn badges by completing Bible-learning activities at different difficulty levels. Their achievements are displayed in the Hall of Fame, allowing them to see their progress as they continue along the Faith-Trails journey.
+```text
+faith-trails/
+├── app.py                         Flask application and API routes
+├── schema.sql                     Fresh-install SQLite schema
+├── generate_narration.py          ElevenLabs narration generator
+├── narration_utils.py             Narration indexing and cache filenames
+├── quest_content_series2.py       Series 2 quest content
+├── quest_content_series3.py       Series 3 quest content
+├── quest_content_series4.py       Series 4 quest content
+├── quest_content_series5.py       Series 5 quest content
+├── prepare_grand_champion_test.py Optional 74-badge test-player setup
+├── test_faith_trails.py           Automated integration tests
+├── requirements.txt               Python dependencies
+├── static/
+│   ├── audio/quests/              Generated narration files
+│   ├── css/                       Application styling
+│   ├── img/quests/                Quest covers and scene illustrations
+│   ├── js/                        Gameplay, audio, and player navigation
+│   └── music/                     Gameplay and celebration music
+└── templates/                     Flask and Jinja page templates
+```
 
-Additional celebration and reward features are incorporated into the game to make completing milestones feel meaningful and fun.
+## Local Setup
 
-## Responsive and Mobile Design
+### 1. Clone the repository
 
-The application is designed to work on both desktop and mobile devices.
+```bash
+git clone https://github.com/songbird12865/faith-trails.git
+cd faith-trails
+```
 
-The current web architecture also provides a foundation for future packaging as a mobile application. Mobile-store packaging, offline asset management, privacy and parental information, application icons, splash screens, and store metadata can be handled as a separate release phase.
+### 2. Create and activate a virtual environment
 
-## Run Locally
+Windows PowerShell:
 
-1. Clone or download the repository.
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+```
 
-2. Open a terminal in the project folder.
+macOS or Linux:
 
-3. Install the required dependencies:
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
 
-   `python -m pip install -r requirements.txt`
+### 3. Install dependencies
 
-4. Start the application:
+```bash
+pip install -r requirements.txt
+```
 
-   `python app.py`
+### 4. Prepare the database
 
-5. Open the local application in your browser:
+If you already have `faith_trails.db`, keep it and make a backup before updating the application. The app performs a non-destructive quest-catalog migration when the site is opened.
 
-   `http://127.0.0.1:5000`
+For a brand-new installation only, create the database from `schema.sql`:
 
-The included database preserves existing player and progress data. To create a new database, run:
+```bash
+sqlite3 faith_trails.db ".read schema.sql"
+```
 
-`python init_db.py`
+> **Warning:** Do not run `schema.sql` against an existing application database. It drops and recreates the tables, which would erase player profiles and badge progress.
 
-## Environment Configuration
+### 5. Start the application
 
-For production deployment, set `FAITH_TRAILS_SECRET_KEY` to a secure private value in the hosting environment.
+```bash
+python app.py
+```
 
-For ElevenLabs narration, set `ELEVENLABS_API_KEY` in the server environment. `ELEVENLABS_VOICE_ID` may also be configured when needed.
+Open [http://127.0.0.1:5000](http://127.0.0.1:5000) in a browser.
 
-**API keys and secret values should never be committed to the GitHub repository.**
+## Narration Setup
 
-## Future Development
+Keep the ElevenLabs API key outside the source code. Set it as an environment variable before generating narration or starting the hosted application.
 
-Faith-Trails is an evolving project. Planned development includes expanding the number of Bible quests and rewards, continuing mobile optimization, and preparing the application for eventual mobile distribution.
+Windows PowerShell example:
 
-The existing single-page architecture was designed to provide a foundation for that continued expansion.
+```powershell
+$env:ELEVENLABS_API_KEY="your_api_key"
+$env:ELEVENLABS_VOICE_ID_SERIES_1="your_series_1_voice_id"
+$env:ELEVENLABS_VOICE_ID_SERIES_2="your_series_2_voice_id"
+$env:ELEVENLABS_VOICE_ID_SERIES_3="your_series_3_voice_id"
+$env:ELEVENLABS_VOICE_ID_SERIES_4="your_series_4_voice_id"
+$env:ELEVENLABS_VOICE_ID_SERIES_5="your_series_5_voice_id"
+```
 
-## What I Learned
+Generate any missing narration files:
 
-Developing Faith-Trails has allowed me to combine front-end and back-end development within a larger application of my own design.
+```bash
+python generate_narration.py
+```
 
-The project has strengthened my experience with Python and Flask development, JavaScript-driven interfaces, responsive design, application state, persistent player data, API integration, multimedia management, debugging, deployment, and Git-based version control.
+Narration filenames are based on the text and selected voice. Existing matching recordings are reused, while revised narration automatically receives a new filename. If a recording is unavailable, the application can fall back to the device voice.
 
-It has also given me experience designing software around the needs of a specific audience rather than simply implementing individual programming requirements.
+Never commit an ElevenLabs API key, `.env` file containing secrets, or PythonAnywhere configuration containing credentials.
 
-## Author
+## Automated Testing
 
-**Melissa Joyce**
+Run the complete integration test suite from the project root:
 
-B.S. Information Technology
-Strayer University — Expected December 2026
+```bash
+python -m unittest -v test_faith_trails.py
+```
 
----
+The current suite contains 39 tests covering player profiles, all five series, quest content, difficulty levels, badges, narration indexing, scene artwork, saved progress, and the 75-badge Grand Champion trigger.
 
-*Faith-Trails is an independently developed educational application created to make Bible learning interactive, engaging, and rewarding for children.*
+## Grand Champion Test Player
 
+The optional setup script creates a disposable player with 74 of 75 badges. Easter on Hard remains unfinished so the final celebration can be tested without manually completing every earlier quest.
+
+```bash
+python prepare_grand_champion_test.py
+```
+
+Select **Grand Champion Test**, open Series 5, and complete Easter on Hard.
+
+Remove the test player afterward:
+
+```bash
+python prepare_grand_champion_test.py --remove
+```
+
+The script changes only the disposable test profile and does not alter other players' progress.
+
+## PythonAnywhere Deployment Notes
+
+1. Back up the live project folder and `faith_trails.db`.
+2. Upload the updated application files without replacing the live database.
+3. Keep `ELEVENLABS_API_KEY` and narrator voice IDs in the PythonAnywhere environment or WSGI configuration.
+4. Reload the web application from the PythonAnywhere Web tab.
+5. Open the site once so the non-destructive quest-catalog migration runs.
+6. Verify player selection, narration, difficulty changes, badges, Hall of Fame, and quest completion.
+
+Do not place credentials directly in `app.py`, `generate_narration.py`, or any file committed to GitHub.
+
+## Before Committing to GitHub
+
+Review `git status` and confirm that secrets, local environments, cache files, and player data are not included. These items should remain untracked:
+
+```text
+.env
+.venv/
+__pycache__/
+*.pyc
+faith_trails.db
+```
+
+Keep the application code, templates, styles, JavaScript, quest artwork, music, and required narration assets in the repository. Then commit the completed build:
+
+```bash
+git status
+git add .
+git commit -m "Complete Faith-Trails five-series app"
+git push
+```
+
+## Music Credit
+
+Gameplay and celebration music are provided by [FiftySounds](https://www.fiftysounds.com/).
+
+## Project Owner
+
+Created by **Melissa Joyce** as part of the *A Closer Walk* children's ministry and software-development portfolio.
+
+- Website: [acloserwalk.org](https://acloserwalk.org)
+- GitHub: [songbird12865](https://github.com/songbird12865)
+- LinkedIn: [Melissa Joyce](https://www.linkedin.com/in/melissa-joyce-21147386/)
+
+## Copyright
+
+Copyright © 2026 Melissa Joyce. All rights reserved. This project is shared publicly for portfolio and demonstration purposes. The code, artwork, narration, branding, and written content may not be copied, redistributed, or used commercially without permission.
