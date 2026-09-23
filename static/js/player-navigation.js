@@ -112,24 +112,60 @@
       card.querySelector('[data-player-rename-form]').hidden = true;
       return;
     }
-    if (card && event.target.closest('[data-player-delete]')) {
-      const name = card.querySelector('[data-player-name]').textContent.trim();
-      if (!window.confirm(`Delete ${name} and all of their badges and progress? This cannot be undone.`)) return;
-      const button = event.target.closest('button');
-      button.disabled = true;
-      try {
-        const response = await fetch(`/api/players/${card.dataset.playerId}`, {
-          method: 'DELETE', credentials: 'same-origin'
-        });
-        const result = await response.json();
-        if (!response.ok) throw new Error(result.error || 'Could not delete player.');
-        await showPage('/players', { replaceHistory: true });
-      } catch (error) {
-        window.alert(error.message || 'Could not delete player. Please try again.');
-        button.disabled = false;
+if (card && event.target.closest('[data-player-delete]')) {
+  event.preventDefault();
+
+  const button = event.target.closest('[data-player-delete]');
+  const controls = button.parentElement;
+  const name = card.querySelector('[data-player-name]').textContent.trim();
+
+  // Show an in-page confirmation instead of the browser's native confirm box.
+  controls.innerHTML = '';
+
+  const message = document.createElement('span');
+  message.textContent = `Delete ${name}?`;
+  message.className = 'font-bold text-red-700';
+
+  const cancelButton = document.createElement('button');
+  cancelButton.type = 'button';
+  cancelButton.textContent = 'Cancel';
+  cancelButton.className = 'font-bold text-slate-600 underline';
+
+  const confirmButton = document.createElement('button');
+  confirmButton.type = 'button';
+  confirmButton.textContent = 'Delete';
+  confirmButton.className = 'font-bold text-red-700 underline';
+
+  controls.append(message, cancelButton, confirmButton);
+
+  cancelButton.addEventListener('click', async () => {
+    await showPage('/players', { replaceHistory: true });
+  });
+
+  confirmButton.addEventListener('click', async () => {
+    confirmButton.disabled = true;
+
+    try {
+      const response = await fetch(`/api/players/${card.dataset.playerId}`, {
+        method: 'DELETE',
+        credentials: 'same-origin'
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Could not delete player.');
       }
-      return;
+
+      await showPage('/players', { replaceHistory: true });
+    } catch (error) {
+      window.alert(error.message || 'Could not delete player. Please try again.');
+      confirmButton.disabled = false;
     }
+  });
+
+  return;
+}
 
     const changePlayer = event.target.closest('[data-change-player]');
     if (changePlayer) 
