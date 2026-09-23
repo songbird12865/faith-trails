@@ -101,6 +101,36 @@
   // Handle player links and difficulty buttons with one click listener.
   document.addEventListener('click', async (event) => 
     {
+    const card = event.target.closest('[data-player-card]');
+    if (card && event.target.closest('[data-player-rename]')) {
+      const form = card.querySelector('[data-player-rename-form]');
+      form.hidden = false;
+      form.querySelector('input[name="name"]').focus();
+      return;
+    }
+    if (card && event.target.closest('[data-player-rename-cancel]')) {
+      card.querySelector('[data-player-rename-form]').hidden = true;
+      return;
+    }
+    if (card && event.target.closest('[data-player-delete]')) {
+      const name = card.querySelector('[data-player-name]').textContent.trim();
+      if (!window.confirm(`Delete ${name} and all of their badges and progress? This cannot be undone.`)) return;
+      const button = event.target.closest('button');
+      button.disabled = true;
+      try {
+        const response = await fetch(`/api/players/${card.dataset.playerId}`, {
+          method: 'DELETE', credentials: 'same-origin'
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Could not delete player.');
+        await showPage('/players', { replaceHistory: true });
+      } catch (error) {
+        window.alert(error.message || 'Could not delete player. Please try again.');
+        button.disabled = false;
+      }
+      return;
+    }
+
     const changePlayer = event.target.closest('[data-change-player]');
     if (changePlayer) 
       {
@@ -154,6 +184,32 @@
   // Validate and submit the New Player form without reloading the page.
   document.addEventListener('submit', async (event) => 
     {
+    const renameForm = event.target.closest('[data-player-rename-form]');
+    if (renameForm) {
+      event.preventDefault();
+      const card = renameForm.closest('[data-player-card]');
+      const input = renameForm.querySelector('input[name="name"]');
+      const feedback = renameForm.querySelector('[data-player-feedback]');
+      const save = renameForm.querySelector('button[type="submit"]');
+      save.disabled = true;
+      feedback.hidden = true;
+      try {
+        const response = await fetch(`/api/players/${card.dataset.playerId}`, {
+          method: 'PATCH', credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: input.value.trim() })
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Could not rename player.');
+        await showPage('/players', { replaceHistory: true });
+      } catch (error) {
+        feedback.textContent = error.message || 'Could not rename player. Please try again.';
+        feedback.hidden = false;
+        save.disabled = false;
+      }
+      return;
+    }
+
     const form = event.target.closest('#create-profile-form');
     if (!form) return;
 

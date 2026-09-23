@@ -11,17 +11,33 @@
   <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-8" id="player-grid">
     {# Flask creates one selection card for each saved player. #}
     {% for player in players %}
-    <a href="{{ url_for('select_player', user_id=player['id']) }}"
+    <div class="rounded-2xl bg-white shadow border-2 border-transparent p-3" data-player-card data-player-id="{{ player['id'] }}">
+      <a href="{{ url_for('select_player', user_id=player['id']) }}"
        data-player-select
-       class="flex flex-col items-center justify-center gap-2 rounded-2xl bg-white shadow
+       class="flex flex-col items-center justify-center gap-2 rounded-2xl
               hover:shadow-lg hover:-translate-y-1 transition p-6 border-2 border-transparent
               hover:border-amber-400">
       <span class="text-4xl">🧑‍🚀</span>
-      <span class="font-semibold text-slate-700">{{ player['name'] }}</span>
+      <span class="font-semibold text-slate-700" data-player-name>{{ player['name'] }}</span>
       <span class="text-xs uppercase tracking-wide text-slate-400">
         {{ player['current_difficulty'] or 'new' }}
       </span>
-    </a>
+      </a>
+      <div class="flex justify-center gap-3 text-sm mt-1">
+        <button type="button" data-player-rename class="font-bold text-trailgreen underline" aria-label="Rename {{ player['name'] }}">Rename</button>
+        <button type="button" data-player-delete class="font-bold text-red-700 underline" aria-label="Delete {{ player['name'] }}">Delete</button>
+      </div>
+      <form data-player-rename-form hidden class="mt-3 text-left">
+        <label class="block text-sm font-bold" for="rename-player-{{ player['id'] }}">New name</label>
+        <input id="rename-player-{{ player['id'] }}" name="name" value="{{ player['name'] }}" maxlength="60" required
+               class="w-full rounded-lg border border-slate-400 p-2 text-slate-800">
+        <div class="flex gap-3 mt-2">
+          <button type="submit" class="rounded-lg bg-trailgreen text-white px-3 py-2 font-bold">Save</button>
+          <button type="button" data-player-rename-cancel class="rounded-lg border px-3 py-2">Cancel</button>
+        </div>
+        <p data-player-feedback role="alert" class="text-sm text-red-700 mt-2" hidden></p>
+      </form>
+    </div>
     {% endfor %}
 
     <!-- This card opens the form for creating another player. -->

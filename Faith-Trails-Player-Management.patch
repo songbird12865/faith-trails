@@ -1,0 +1,172 @@
+diff --git a/app.py b/app.py
+index 3ab2f95..b9cdd8d 100644
+--- a/app.py
++++ b/app.py
+@@ -1535,6 +1535,38 @@ def get_profile_route():
+     return jsonify({"id": user["id"], "name": user["name"], "difficulty": user["current_difficulty"]})
+ 
+ 
++@app.route("/api/players/<int:user_id>", methods=["PATCH", "DELETE"])
++def manage_player(user_id):
++    """Manage a saved player from the picker without selecting that player."""
++    db = get_db()
++    player = db.execute("SELECT id, name FROM users WHERE id = ?", (user_id,)).fetchone()
++    if player is None:
++        return jsonify({"error": "Player not found"}), 404
++
++    if request.method == "PATCH":
++        data = request.get_json(silent=True) or {}
++        name = data.get("name")
++        if not isinstance(name, str) or not name.strip():
++            return jsonify({"error": "Please enter a player name"}), 400
++        name = name.strip()
++        try:
++            db.execute("UPDATE users SET name = ? WHERE id = ?", (name, user_id))
++            db.commit()
++        except sqlite3.IntegrityError:
++            db.rollback()
++            return jsonify({"error": "That name is already taken -- pick a different one"}), 409
++        return jsonify({"success": True, "id": user_id, "name": name})
++
++    # The schema does not enable ON DELETE CASCADE. Remove this player's
++    # badges explicitly in the same transaction as their profile.
++    db.execute("DELETE FROM badges_earned WHERE user_id = ?", (user_id,))
++    db.execute("DELETE FROM users WHERE id = ?", (user_id,))
++    db.commit()
++    if session.get("user_id") == user_id:
++        session.pop("user_id", None)
++    return jsonify({"success": True})
++
++
+ @app.route("/api/profile", methods=["PUT"])
+ def update_profile():
+     """UPDATE: lets a child (or parent) change the profile name and/or
+diff --git a/static/js/player-navigation.js b/static/js/player-navigation.js
+index 8653ef9..de89e17 100644
+--- a/static/js/player-navigation.js
++++ b/static/js/player-navigation.js
+@@ -101,6 +101,36 @@
+   // Handle player links and difficulty buttons with one click listener.
+   document.addEventListener('click', async (event) => 
+     {
++    const card = event.target.closest('[data-player-card]');
++    if (card && event.target.closest('[data-player-rename]')) {
++      const form = card.querySelector('[data-player-rename-form]');
++      form.hidden = false;
++      form.querySelector('input[name="name"]').focus();
++      return;
++    }
++    if (card && event.target.closest('[data-player-rename-cancel]')) {
++      card.querySelector('[data-player-rename-form]').hidden = true;
++      return;
++    }
++    if (card && event.target.closest('[data-player-delete]')) {
++      const name = card.querySelector('[data-player-name]').textContent.trim();
++      if (!window.confirm(`Delete ${name} and all of their badges and progress? This cannot be undone.`)) return;
++      const button = event.target.closest('button');
++      button.disabled = true;
++      try {
++        const response = await fetch(`/api/players/${card.dataset.playerId}`, {
++          method: 'DELETE', credentials: 'same-origin'
++        });
++        const result = await response.json();
++        if (!response.ok) throw new Error(result.error || 'Could not delete player.');
++        await showPage('/players', { replaceHistory: true });
++      } catch (error) {
++        window.alert(error.message || 'Could not delete player. Please try again.');
++        button.disabled = false;
++      }
++      return;
++    }
++
+     const changePlayer = event.target.closest('[data-change-player]');
+     if (changePlayer) 
+       {
+@@ -154,6 +184,32 @@
+   // Validate and submit the New Player form without reloading the page.
+   document.addEventListener('submit', async (event) => 
+     {
++    const renameForm = event.target.closest('[data-player-rename-form]');
++    if (renameForm) {
++      event.preventDefault();
++      const card = renameForm.closest('[data-player-card]');
++      const input = renameForm.querySelector('input[name="name"]');
++      const feedback = renameForm.querySelector('[data-player-feedback]');
++      const save = renameForm.querySelector('button[type="submit"]');
++      save.disabled = true;
++      feedback.hidden = true;
++      try {
++        const response = await fetch(`/api/players/${card.dataset.playerId}`, {
++          method: 'PATCH', credentials: 'same-origin',
++          headers: { 'Content-Type': 'application/json' },
++          body: JSON.stringify({ name: input.value.trim() })
++        });
++        const result = await response.json();
++        if (!response.ok) throw new Error(result.error || 'Could not rename player.');
++        await showPage('/players', { replaceHistory: true });
++      } catch (error) {
++        feedback.textContent = error.message || 'Could not rename player. Please try again.';
++        feedback.hidden = false;
++        save.disabled = false;
++      }
++      return;
++    }
++
+     const form = event.target.closest('#create-profile-form');
+     if (!form) return;
+ 
+diff --git a/templates/base.html b/templates/base.html
+index b8a308a..cd370d6 100644
+--- a/templates/base.html
++++ b/templates/base.html
+@@ -61,7 +61,7 @@
+  
+   <!-- Load shared JavaScript before any script required by a specific page. -->
+   <script src="{{ url_for('static',filename='js/audio-engine.js') }}?v=6"></script>
+-  <script src="{{ url_for('static',filename='js/player-navigation.js') }}?v=3"></script>
++  <script src="{{ url_for('static',filename='js/player-navigation.js') }}?v=4"></script>
+   {% block scripts %}{% endblock %}
+ </body>
+ </html>
+diff --git a/templates/players.html b/templates/players.html
+index 39d3657..7f1806f 100644
+--- a/templates/players.html
++++ b/templates/players.html
+@@ -11,17 +11,33 @@
+   <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-8" id="player-grid">
+     {# Flask creates one selection card for each saved player. #}
+     {% for player in players %}
+-    <a href="{{ url_for('select_player', user_id=player['id']) }}"
++    <div class="rounded-2xl bg-white shadow border-2 border-transparent p-3" data-player-card data-player-id="{{ player['id'] }}">
++      <a href="{{ url_for('select_player', user_id=player['id']) }}"
+        data-player-select
+-       class="flex flex-col items-center justify-center gap-2 rounded-2xl bg-white shadow
++       class="flex flex-col items-center justify-center gap-2 rounded-2xl
+               hover:shadow-lg hover:-translate-y-1 transition p-6 border-2 border-transparent
+               hover:border-amber-400">
+       <span class="text-4xl">🧑‍🚀</span>
+-      <span class="font-semibold text-slate-700">{{ player['name'] }}</span>
++      <span class="font-semibold text-slate-700" data-player-name>{{ player['name'] }}</span>
+       <span class="text-xs uppercase tracking-wide text-slate-400">
+         {{ player['current_difficulty'] or 'new' }}
+       </span>
+-    </a>
++      </a>
++      <div class="flex justify-center gap-3 text-sm mt-1">
++        <button type="button" data-player-rename class="font-bold text-trailgreen underline" aria-label="Rename {{ player['name'] }}">Rename</button>
++        <button type="button" data-player-delete class="font-bold text-red-700 underline" aria-label="Delete {{ player['name'] }}">Delete</button>
++      </div>
++      <form data-player-rename-form hidden class="mt-3 text-left">
++        <label class="block text-sm font-bold" for="rename-player-{{ player['id'] }}">New name</label>
++        <input id="rename-player-{{ player['id'] }}" name="name" value="{{ player['name'] }}" maxlength="60" required
++               class="w-full rounded-lg border border-slate-400 p-2 text-slate-800">
++        <div class="flex gap-3 mt-2">
++          <button type="submit" class="rounded-lg bg-trailgreen text-white px-3 py-2 font-bold">Save</button>
++          <button type="button" data-player-rename-cancel class="rounded-lg border px-3 py-2">Cancel</button>
++        </div>
++        <p data-player-feedback role="alert" class="text-sm text-red-700 mt-2" hidden></p>
++      </form>
++    </div>
+     {% endfor %}
+ 
+     <!-- This card opens the form for creating another player. -->

@@ -1535,6 +1535,38 @@ def get_profile_route():
     return jsonify({"id": user["id"], "name": user["name"], "difficulty": user["current_difficulty"]})
 
 
+@app.route("/api/players/<int:user_id>", methods=["PATCH", "DELETE"])
+def manage_player(user_id):
+    """Manage a saved player from the picker without selecting that player."""
+    db = get_db()
+    player = db.execute("SELECT id, name FROM users WHERE id = ?", (user_id,)).fetchone()
+    if player is None:
+        return jsonify({"error": "Player not found"}), 404
+
+    if request.method == "PATCH":
+        data = request.get_json(silent=True) or {}
+        name = data.get("name")
+        if not isinstance(name, str) or not name.strip():
+            return jsonify({"error": "Please enter a player name"}), 400
+        name = name.strip()
+        try:
+            db.execute("UPDATE users SET name = ? WHERE id = ?", (name, user_id))
+            db.commit()
+        except sqlite3.IntegrityError:
+            db.rollback()
+            return jsonify({"error": "That name is already taken -- pick a different one"}), 409
+        return jsonify({"success": True, "id": user_id, "name": name})
+
+    # The schema does not enable ON DELETE CASCADE. Remove this player's
+    # badges explicitly in the same transaction as their profile.
+    db.execute("DELETE FROM badges_earned WHERE user_id = ?", (user_id,))
+    db.execute("DELETE FROM users WHERE id = ?", (user_id,))
+    db.commit()
+    if session.get("user_id") == user_id:
+        session.pop("user_id", None)
+    return jsonify({"success": True})
+
+
 @app.route("/api/profile", methods=["PUT"])
 def update_profile():
     """UPDATE: lets a child (or parent) change the profile name and/or

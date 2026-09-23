@@ -1,0 +1,26 @@
+Faith-Trails: Rename and Delete Player
+
+This update adds Rename and Delete controls to each card on the Who's Playing? screen.
+Renaming keeps the player's badges and other progress. Deleting asks for
+confirmation and permanently removes only that player's profile and badges.
+
+APPLY TO YOUR CURRENT PROJECT
+
+1. Copy Faith-Trails-Player-Management.patch into your Faith-Trails project
+   folder, beside app.py. Open a VS Code terminal in that folder.
+2. Run: git status
+   If you have uncommitted changes, commit or save them first.
+3. Run: git apply --check Faith-Trails-Player-Management.patch
+4. If step 3 succeeds, run: git apply Faith-Trails-Player-Management.patch
+5. Start your app as usual with: python app.py
+6. Open Change Player, then use Rename or Delete under a player card.
+   Refresh your browser once if the old controls remain cached.
+
+If git apply --check reports a conflict, stop. Do not replace your current
+files with older copies. The project files have changed since the shared
+version; the patch needs to be adapted to those current files.
+
+This package contains no database file. Do not run init_db.py or schema.sql.
+Your existing players and progress stay in your current faith_trails.db.
+Once the update is running, you can delete the illustrative Maddie profile
+using the new Delete button and confirmation.
