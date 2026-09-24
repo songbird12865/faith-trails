@@ -1141,6 +1141,9 @@ def build_scenes(content, difficulty, slug=None):
 
 # Routes
 
+@app.route("/privacy")
+def privacy():
+    return render_template("privacy.html")
 
 # These routes display the player selection and game pages.
 @app.route("/players")
