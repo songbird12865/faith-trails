@@ -277,17 +277,32 @@
 
 @media (max-width: 680px) {
   .quest-bottom {
-    gap: .4rem;
+    grid-template-columns: auto 1fr auto;
+    gap: .3rem;
   }
 
-  .quest-bottom .glass-button,
-  .quest-bottom .difficulty-pill {
-    padding: .45rem .65rem;
-    font-size: .72rem;
+  .quest-bottom .glass-button {
+    justify-self: start;
+    padding: .4rem .55rem;
+    font-size: .68rem;
+    white-space: nowrap;
+  }
+
+  .quest-bottom .scene-controls {
+    justify-self: center;
+    min-width: 0;
   }
 
   .quest-bottom .scene-controls .primary-button {
-    padding: .7rem 1rem;
-    font-size: .9rem;
+    padding: .65rem .8rem;
+    font-size: .82rem;
+    white-space: nowrap;
+  }
+
+  .quest-bottom .difficulty-pill {
+    justify-self: end;
+    padding: .32rem .45rem;
+    font-size: .62rem;
+    white-space: nowrap;
   }
 }
