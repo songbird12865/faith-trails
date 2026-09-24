@@ -250,35 +250,44 @@
 /* Preserve the interface while minimizing motion for users who request it. */
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important}}
 
-/* Keep quest navigation controls from covering story artwork on phones. */
+/* Keep Trail Map, scene action, and difficulty together below each quest scene. */
+.quest-bottom {
+  width: 100%;
+  margin-top: auto;
+  padding-top: 1.25rem;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: .75rem;
+}
+
+.quest-bottom .glass-button {
+  justify-self: start;
+}
+
+.quest-bottom .scene-controls {
+  justify-self: center;
+  margin: 0;
+  padding: 0;
+}
+
+.quest-bottom .difficulty-pill {
+  justify-self: end;
+}
+
 @media (max-width: 680px) {
-  .quest-stage {
-    padding-top: 3.6rem;
+  .quest-bottom {
+    gap: .4rem;
   }
 
-  .quest-top {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
+  .quest-bottom .glass-button,
+  .quest-bottom .difficulty-pill {
     padding: .45rem .65rem;
-    background: #fff;
-    align-items: center;
+    font-size: .72rem;
   }
 
-  .glass-button,
-  .difficulty-pill {
-    padding: .4rem .7rem;
-    font-size: .78rem;
-  }
-
-  .quest-art-backdrop,
-  .quest-art {
-    top: 3.6rem;
-    height: calc(43% - 1.8rem);
-  }
-
-  .quest-art-shade {
-    top: 3.6rem;
+  .quest-bottom .scene-controls .primary-button {
+    padding: .7rem 1rem;
+    font-size: .9rem;
   }
 }
