@@ -85,6 +85,18 @@ def build_narration_index(
         for i, scene in enumerate(quest.get("outro_scenes", [])):
             register(scene, f"{slug}__outro__{i}", "text", series_number)
 
+        # Alternate story wording has its own recorded narration. Keep the
+        # original Easy filenames intact for existing audio libraries.
+        for section in ("intro_scenes", "outro_scenes"):
+            for i, scene in enumerate(quest.get(section, [])):
+                for diff, alternate in scene.get("text_by_difficulty", {}).items():
+                    voice_id = series_voice_ids.get(series_number, legacy_voice_id)
+                    key = f"{slug}__{section.removesuffix('scenes').rstrip('_')}__{i}__{diff}"
+                    filename = narration_filename(key, alternate, voice_id, legacy_voice_id)
+                    scene.setdefault("narration_by_difficulty", {})[diff] = filename
+                    index.append({"key": key, "text": alternate, "filename": filename,
+                                  "series_number": series_number, "voice_id": voice_id})
+
         interactive = quest.get("interactive_by_difficulty", {})
         for diff in DIFFICULTIES:
             if diff in interactive:

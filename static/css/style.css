@@ -250,13 +250,20 @@
 /* Preserve the interface while minimizing motion for users who request it. */
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important}}
 
-/* Keep Trail Map, scene action, and difficulty together below each quest scene. */
+/* Quest navigation and a quiet, noninteractive difficulty reminder. */
+.quest-difficulty {
+  margin: auto 0 0;
+  padding-top: 1rem;
+  color: #526659;
+  font-size: .9rem;
+  font-weight: 700;
+  text-transform: capitalize;
+}
 .quest-bottom {
   width: 100%;
-  margin-top: auto;
-  padding-top: 1.25rem;
+  padding-top: .6rem;
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   align-items: center;
   gap: .75rem;
 }
@@ -266,18 +273,22 @@
 }
 
 .quest-bottom .scene-controls {
-  justify-self: center;
+  justify-self: end;
   margin: 0;
   padding: 0;
 }
 
-.quest-bottom .difficulty-pill {
-  justify-self: end;
+.quest-bottom #scene-back {
+  justify-self: center;
+}
+.quest-bottom #scene-back:disabled {
+  opacity: .4;
+  cursor: default;
 }
 
 @media (max-width: 680px) {
   .quest-bottom {
-    grid-template-columns: auto 1fr auto;
+    grid-template-columns: auto auto minmax(0, 1fr);
     gap: .3rem;
   }
 
@@ -289,7 +300,7 @@
   }
 
   .quest-bottom .scene-controls {
-    justify-self: center;
+    justify-self: end;
     min-width: 0;
   }
 
@@ -299,10 +310,4 @@
     white-space: nowrap;
   }
 
-  .quest-bottom .difficulty-pill {
-    justify-self: end;
-    padding: .32rem .45rem;
-    font-size: .62rem;
-    white-space: nowrap;
-  }
 }

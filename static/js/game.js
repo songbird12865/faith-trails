@@ -6,7 +6,7 @@
   // Read the starting player and quest data supplied by Flask.
   const boot=JSON.parse(document.getElementById('game-bootstrap').textContent);
   const mapView=document.getElementById('map-view'),questView=document.getElementById('quest-view');
-  const state={earned:new Set(boot.earned),quest:null,scenes:[],current:0,lesson:'',lessonNarration:null,narration:null,artRequest:0,championKnown:false,championJustUnlocked:false};
+  const state={earned:new Set(boot.earned),quest:null,scenes:[],current:0,highest:0,completedScenes:new Set(),sceneTimer:null,lesson:'',lessonNarration:null,narration:null,artRequest:0,championKnown:false,championJustUnlocked:false};
   // Make text safe before placing it inside HTML.
   const esc=s=>String(s??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
   const img=slug=>`/static/img/quests/${slug}.jpg`;
@@ -116,11 +116,11 @@
     questView.innerHTML='<div class="hero"><div class="scene-emoji">🧭</div><h1>Loading your adventure…</h1></div>';
     transition(mapView,questView,()=>{});
     const r=await fetch(`/api/quest/${slug}`);if(!r.ok){showMap();return toast('That quest could not be loaded.')}
-    const data=await r.json();state.quest=data.quest;state.scenes=data.scenes;state.lesson=data.lesson;state.lessonNarration=data.lesson_narration_file;state.current=0;
+    const data=await r.json();clearSceneTimer();state.quest=data.quest;state.scenes=data.scenes;state.lesson=data.lesson;state.lessonNarration=data.lesson_narration_file;state.current=0;state.highest=0;state.completedScenes=new Set();
     if(push)history.pushState({view:'quest',slug},'',`/quest/${slug}`);renderQuestShell();preloadNextSceneImage(-1);renderScene();
   }
   // Create the shared screen used by every quest.
-  function renderQuestShell(){const cover=img(state.quest.slug);questView.innerHTML=`<article class="quest-stage"><img class="quest-art-backdrop" src="${cover}" data-art-src="${cover}" alt="" decoding="async"><img class="quest-art" src="${cover}" data-art-src="${cover}" alt="${esc(state.quest.title)}" decoding="async"><div class="quest-art-shade"></div><div class="scene-panel"><div id="scene-content" class="scene-content"></div><div class="quest-bottom"><button class="glass-button" id="map-back">← Trail Map</button><div id="scene-controls" class="scene-controls"></div><span class="difficulty-pill">${esc(boot.profile.current_difficulty)}</span></div><div class="progress-track"><div id="progress-fill" class="progress-fill"></div></div></div></article>`;questView.querySelector('#map-back').onclick=showMap}  // Load the next distinct story illustration early to avoid a blank flash.
+  function renderQuestShell(){const cover=img(state.quest.slug);questView.innerHTML=`<article class="quest-stage"><img class="quest-art-backdrop" src="${cover}" data-art-src="${cover}" alt="" decoding="async"><img class="quest-art" src="${cover}" data-art-src="${cover}" alt="${esc(state.quest.title)}" decoding="async"><div class="quest-art-shade"></div><div class="scene-panel"><div id="scene-content" class="scene-content"></div><p class="quest-difficulty">Difficulty: ${esc(boot.profile.current_difficulty)}</p><div class="quest-bottom"><button class="glass-button" id="map-back">← Trail Map</button><button class="glass-button" id="scene-back">← Back</button><div id="scene-controls" class="scene-controls"></div></div><div class="progress-track"><div id="progress-fill" class="progress-fill"></div></div></div></article>`;questView.querySelector('#map-back').onclick=showMap;questView.querySelector('#scene-back').onclick=goBack}  // Load the next distinct story illustration early to avoid a blank flash.
   function preloadNextSceneImage(fromIndex)
   {
     const current=fromIndex>=0?sceneImg(state.scenes[fromIndex]):null;
@@ -141,44 +141,181 @@
     loader.src=requested;
   }
   // Stop narration and return the player to the trail map.
-  function showMap(){stopNarration();history.pushState({view:'map'},'', '/');transition(questView,mapView,renderMap)}
+  function clearSceneTimer(){if(state.sceneTimer!==null){clearTimeout(state.sceneTimer);state.sceneTimer=null}}
+  function showMap(){clearSceneTimer();stopNarration();history.pushState({view:'map'},'', '/');transition(questView,mapView,renderMap)}
+  function goBack(){if(state.current<1)return;clearSceneTimer();stopNarration();state.current--;renderScene()}
   // Move forward by one scene.
-  function advance(){stopNarration();state.current++;renderScene()}
+  function advance(){clearSceneTimer();stopNarration();state.completedScenes.add(state.current);state.current++;state.highest=Math.max(state.highest,state.current);renderScene()}
   // Display the correct activity for the current scene type.
   function renderScene()
   {
     const content=document.getElementById('scene-content'),controls=document.getElementById('scene-controls');if(!content)return;
-    content.innerHTML='';controls.innerHTML='';document.getElementById('progress-fill').style.width=`${Math.min(100,(state.current/(state.scenes.length||1))*100)}%`;
+    clearSceneTimer();content.innerHTML='';controls.innerHTML='';document.getElementById('progress-fill').style.width=`${Math.min(100,(state.highest/(state.scenes.length||1))*100)}%`;
     if(state.current>=state.scenes.length)return completeQuest();
+    const back=document.getElementById('scene-back');back.disabled=state.current===0;
     const s=state.scenes[state.current];updateSceneArtwork(s);playNarration(s.narration_file,s._narration_text||s.text||s.prompt||s.verse);
+    if(state.completedScenes.has(state.current)&&s.type!=='story'){
+      renderCompletedScene(s,content,controls);return;
+    }
     // Choose the matching renderer from the scene data.
     if(s.type==='story')renderStory(s,content,controls);else if(s.type==='quiz')renderQuiz(s,content);else if(s.type==='memory_verse')renderVerse(s,content,controls);else if(s.subtype==='matching')renderMatching(s,content,controls);else if(s.subtype==='color_picker')renderColors(s,content,controls);else if(s.subtype==='sequence')renderSequence(s,content,controls);
   }
   // Show a story page and its Continue button.
   function renderStory(s,c,k){c.innerHTML=`<div class="scene-emoji">${s.emoji||'✨'}</div><h2 class="scene-title">${esc(state.quest.title)}</h2><p class="scene-text">${esc(s.text)}</p>`;k.appendChild(button('Continue →',advance))}
-  // Show a multiple-choice question and check the answer.
-  function renderQuiz(s,c){c.innerHTML=`<div class="scene-emoji">🤔</div><h2 class="scene-title">Choose your answer</h2><p class="scene-text">${esc(s.prompt)}</p><div class="choice-grid"></div><p class="feedback"></p>`;const grid=c.querySelector('.choice-grid'),f=c.querySelector('.feedback');s.options.forEach((o,i)=>{const b=button(o,()=>{if(i===s.correct_index){b.classList.add('correct');f.className='feedback good';f.textContent='That’s right! ✨';setTimeout(advance,800)}else{b.classList.remove('wrong');void b.offsetWidth;b.classList.add('wrong');f.className='feedback retry';f.textContent='Almost—try another answer!'}},'game-choice');grid.appendChild(b)})}
-  // Let the player move every matching item into the target area.
-  function renderMatching(s,c,k){let count=0;c.innerHTML=`<div class="scene-emoji">👐</div><h2 class="scene-title">${esc(s.prompt)}</h2><div class="drop-zone"><span>Tap an item to move it here</span></div><div class="item-tray"></div>`;const tray=c.querySelector('.item-tray'),zone=c.querySelector('.drop-zone');s.items.forEach(item=>{const b=button(`${item.emoji} ${item.label}`,()=>{if(b.disabled)return;b.disabled=true;b.style.opacity='.3';if(zone.querySelector('span'))zone.innerHTML='';const x=document.createElement('div');x.className='game-item flying';x.textContent=item.emoji;zone.appendChild(x);if(++count===s.items.length)k.appendChild(button('Great job! Continue →',advance))},'game-item');tray.appendChild(b)})}
-  // Let the player fill the coat with the required colors.
-  function renderColors(s,c,k){const colors=Array(s.target_count).fill(null);const draw=()=>{c.innerHTML=`<div class="scene-emoji">🎨</div><h2 class="scene-title">${esc(s.prompt)}</h2><div class="coat">${colors.map(x=>`<div class="coat-stripe" style="background:${x||'#efe6d0'}"></div>`).join('')}</div><div class="choice-grid palette"></div>`;s.palette.forEach(col=>{const b=button(col.name,()=>{const n=colors.indexOf(null);if(n<0)return;colors[n]=col.hex;draw();if(!colors.includes(null)){k.innerHTML='';k.appendChild(button('Beautiful! Continue →',advance))}},'game-choice');b.style.borderColor=col.hex;b.style.background=col.hex;b.style.color='#fff';c.querySelector('.palette').appendChild(b)})};draw()}
-  // Let the player arrange the story items in the correct order.
-  function renderSequence(s,c,k){let tray=[...s.items].sort(()=>Math.random()-.5),built=[];const draw=()=>{c.innerHTML=`<div class="scene-emoji">🧩</div><h2 class="scene-title">${esc(s.prompt)}</h2><div class="assembly-line"></div><div class="item-tray"></div><p class="feedback"></p>`;built.forEach((x,i)=>c.querySelector('.assembly-line').appendChild(button(`${i+1}. ${x.emoji} ${x.label}`,()=>{built= built.filter(y=>y.id!==x.id);tray.push(x);draw()},'word-chip')));tray.forEach(x=>c.querySelector('.item-tray').appendChild(button(`${x.emoji} ${x.label}`,()=>{built.push(x);tray=tray.filter(y=>y.id!==x.id);draw();if(!tray.length)check()},'game-item')))};const check=()=>{const ok=built.every((x,i)=>x.id===s.items[i].id),f=c.querySelector('.feedback');f.textContent=ok?'Perfect order! ✨':'Not quite. Tap a placed item to move it back.';f.className=`feedback ${ok?'good':'retry'}`;if(ok)k.appendChild(button('Continue →',advance))};draw()}
-  // Let the player rebuild a verse and choose its reference.
-  function renderVerse(s,c,k)
-  {
-    // Give every word its own ID so repeated words still work correctly.
-    const words=s.verse.split(' ').map((word,id)=>({word,id}));let tray=[],built=[];
-    const learn=()=>{c.innerHTML=`<div class="scene-emoji">📖</div><h2 class="scene-title">Memory Verse</h2><p class="scene-text">“${esc(s.verse)}”</p><p><strong>${esc(s.reference)}</strong></p>`;k.innerHTML='';k.appendChild(button('Build the verse →',build))};
-    const build=()=>{stopNarration();tray=[...words].sort(()=>Math.random()-.5);built=[];draw()};
-    const draw=()=>{c.innerHTML='<h2 class="scene-title">Tap the words in order</h2><p class="scene-text">The numbers show the sentence order. Tap a placed word to move it back.</p><div class="assembly-line"></div><div class="item-tray"></div><p class="feedback"></p>';built.forEach((x,i)=>c.querySelector('.assembly-line').appendChild(button(`${i+1}. ${x.word}`,()=>{built=built.filter(y=>y.id!==x.id);tray.push(x);draw()},'word-chip')));tray.forEach(x=>c.querySelector('.item-tray').appendChild(button(x.word,()=>{built.push(x);tray=tray.filter(y=>y.id!==x.id);draw();if(!tray.length)check()},'word-chip')))};
-    // Ignore punctuation and extra spaces while checking word order.
-    const normalize=text=>text.toLowerCase().replace(/[^a-z0-9\s]/g,'').replace(/\s+/g,' ').trim();
-    const check=()=>{const assembled=normalize(built.map(x=>x.word).join(' ')),expected=normalize(s.verse),ok=assembled===expected,f=c.querySelector('.feedback');f.textContent=ok?'You built it! ✨':'The words are all here, but their order is not quite right. Tap a word to move it back.';f.className=`feedback ${ok?'good':'retry'}`;if(ok){k.innerHTML='';k.appendChild(button('Choose its Bible reference →',reference))}};
-    const reference=()=>{c.innerHTML='<div class="scene-emoji">📍</div><h2 class="scene-title">Where is this verse found?</h2><div class="choice-grid"></div><p class="feedback"></p>';[...s.reference_options].sort(()=>Math.random()-.5).forEach(x=>{c.querySelector('.choice-grid').appendChild(button(x,()=>{const f=c.querySelector('.feedback');if(x===s.reference){f.textContent='Correct! ✨';f.className='feedback good';setTimeout(advance,700)}else{f.textContent='Try another reference.';f.className='feedback retry'}},'game-choice'))})};
-    learn();
+  function renderCompletedScene(s,c,k){
+    const heading=s.type==='quiz'?'Question':s.type==='memory_verse'?'Memory Verse':'Activity';
+    const detail=s.type==='memory_verse'?`“${esc(s.verse)}”<br>${esc(s.reference)}`:esc(s.prompt);
+    c.innerHTML=`<div class="scene-emoji">✅</div><h2 class="scene-title">${heading} completed!</h2><p class="scene-text">${detail}</p><p>Your work is saved. Continue when you’re ready.</p>`;
+    k.appendChild(button('Continue →',advance));
   }
-  // Use the device voice when a recorded narration file is unavailable.
+  // Show a multiple-choice question and check the answer.
+  function renderQuiz(s,c){c.innerHTML=`<div class="scene-emoji">🤔</div><h2 class="scene-title">Choose your answer</h2><p class="scene-text">${esc(s.prompt)}</p><div class="choice-grid"></div><p class="feedback"></p>`;const grid=c.querySelector('.choice-grid'),f=c.querySelector('.feedback');s.options.forEach((o,i)=>{const b=button(o,()=>{if(state.sceneTimer!==null)return;if(i===s.correct_index){b.classList.add('correct');f.className='feedback good';f.textContent='That’s right! ✨';state.completedScenes.add(state.current);state.sceneTimer=setTimeout(advance,800)}else{b.classList.remove('wrong');void b.offsetWidth;b.classList.add('wrong');f.className='feedback retry';f.textContent='Almost—try another answer!'}},'game-choice');grid.appendChild(b)})}
+  // Let the player move every matching item into the target area.
+  function renderMatching(s,c,k){let count=0;c.innerHTML=`<div class="scene-emoji">👐</div><h2 class="scene-title">${esc(s.prompt)}</h2><div class="drop-zone"><span>Tap an item to move it here</span></div><div class="item-tray"></div>`;const tray=c.querySelector('.item-tray'),zone=c.querySelector('.drop-zone');s.items.forEach(item=>{const b=button(`${item.emoji} ${item.label}`,()=>{if(b.disabled)return;b.disabled=true;b.style.opacity='.3';if(zone.querySelector('span'))zone.innerHTML='';const x=document.createElement('div');x.className='game-item flying';x.textContent=item.emoji;zone.appendChild(x);if(++count===s.items.length){state.completedScenes.add(state.current);k.appendChild(button('Great job! Continue →',advance))}},'game-item');tray.appendChild(b)})}
+  // Let the player fill the coat with the required colors.
+  function renderColors(s,c,k){const colors=Array(s.target_count).fill(null);const draw=()=>{c.innerHTML=`<div class="scene-emoji">🎨</div><h2 class="scene-title">${esc(s.prompt)}</h2><div class="coat">${colors.map(x=>`<div class="coat-stripe" style="background:${x||'#efe6d0'}"></div>`).join('')}</div><div class="choice-grid palette"></div>`;s.palette.forEach(col=>{const b=button(col.name,()=>{const n=colors.indexOf(null);if(n<0)return;colors[n]=col.hex;draw();if(!colors.includes(null)){state.completedScenes.add(state.current);k.innerHTML='';k.appendChild(button('Beautiful! Continue →',advance))}},'game-choice');b.style.borderColor=col.hex;b.style.background=col.hex;b.style.color='#fff';c.querySelector('.palette').appendChild(b)})};draw()}
+  // Let the player arrange the story items in the correct order.
+  function renderSequence(s,c,k){let tray=[...s.items].sort(()=>Math.random()-.5),built=[];const draw=()=>{c.innerHTML=`<div class="scene-emoji">🧩</div><h2 class="scene-title">${esc(s.prompt)}</h2><div class="assembly-line"></div><div class="item-tray"></div><p class="feedback"></p>`;built.forEach((x,i)=>c.querySelector('.assembly-line').appendChild(button(`${i+1}. ${x.emoji} ${x.label}`,()=>{built= built.filter(y=>y.id!==x.id);tray.push(x);draw()},'word-chip')));tray.forEach(x=>c.querySelector('.item-tray').appendChild(button(`${x.emoji} ${x.label}`,()=>{built.push(x);tray=tray.filter(y=>y.id!==x.id);draw();if(!tray.length)check()},'game-item')))};const check=()=>{const ok=built.every((x,i)=>x.id===s.items[i].id),f=c.querySelector('.feedback');f.textContent=ok?'Perfect order! ✨':'Not quite. Tap a placed item to move it back.';f.className=`feedback ${ok?'good':'retry'}`;if(ok){state.completedScenes.add(state.current);k.appendChild(button('Continue →',advance))}};draw()}
+  // Let the player rebuild a verse and choose its reference.
+function renderVerse(s,c,k)
+{
+  // Give every word its own ID so repeated words still work correctly.
+  const words=s.verse.split(' ').map((word,id)=>({word,id}));
+  let tray=[],built=[];
+  let step='learn';
+  let verseBuilt=false;
+
+  const learn=()=>{
+    c.innerHTML=`<div class="scene-emoji">📖</div>
+      <h2 class="scene-title">Memory Verse</h2>
+      <p class="scene-text">“${esc(s.verse)}”</p>
+      <p><strong>${esc(s.reference)}</strong></p>`;
+    k.innerHTML='';
+    k.appendChild(button('Build the verse →',build));
+  };
+
+  const build=()=>{
+    stopNarration();
+    step='build';
+    tray=[...words].sort(()=>Math.random()-.5);
+    built=[];
+    draw();
+  };
+
+  const draw=()=>{
+    c.innerHTML='<h2 class="scene-title">Tap the words in order</h2><p class="scene-text">The numbers show the sentence order. Tap a placed word to move it back.</p><div class="assembly-line"></div><div class="item-tray"></div><p class="feedback"></p>';
+
+    built.forEach((x,i)=>
+      c.querySelector('.assembly-line').appendChild(
+        button(`${i+1}. ${x.word}`,()=>{
+          built=built.filter(y=>y.id!==x.id);
+          tray.push(x);
+          draw();
+        },'word-chip')
+      )
+    );
+
+    tray.forEach(x=>
+      c.querySelector('.item-tray').appendChild(
+        button(x.word,()=>{
+          built.push(x);
+          tray=tray.filter(y=>y.id!==x.id);
+          draw();
+          if(!tray.length)check();
+        },'word-chip')
+      )
+    );
+  };
+
+  // Ignore punctuation and extra spaces while checking word order.
+  const normalize=text=>text.toLowerCase()
+    .replace(/[^a-z0-9\s]/g,'')
+    .replace(/\s+/g,' ')
+    .trim();
+
+  const check=()=>{
+    const assembled=normalize(built.map(x=>x.word).join(' '));
+    const expected=normalize(s.verse);
+    const ok=assembled===expected;
+    const f=c.querySelector('.feedback');
+
+    f.textContent=ok
+      ? 'You built it! ✨'
+      : 'The words are all here, but their order is not quite right. Tap a word to move it back.';
+
+    f.className=`feedback ${ok?'good':'retry'}`;
+
+    if(ok){
+      verseBuilt=true;
+      step='built';
+      k.innerHTML='';
+      k.appendChild(button('Choose its Bible reference →',reference));
+    }
+  };
+
+  const showBuiltVerse=()=>{
+    step='built';
+
+    c.innerHTML=`<div class="scene-emoji">✅</div>
+      <h2 class="scene-title">You built it!</h2>
+      <p class="scene-text">“${esc(s.verse)}”</p>
+      <p><strong>${esc(s.reference)}</strong></p>
+      <p>Your verse is complete. Continue when you’re ready.</p>`;
+
+    k.innerHTML='';
+    k.appendChild(button('Choose its Bible reference →',reference));
+  };
+
+  const reference=()=>{
+    step='reference';
+
+    c.innerHTML='<div class="scene-emoji">📍</div><h2 class="scene-title">Where is this verse found?</h2><div class="choice-grid"></div><p class="feedback"></p>';
+
+    k.innerHTML='';
+
+    [...s.reference_options].sort(()=>Math.random()-.5).forEach(x=>{
+      c.querySelector('.choice-grid').appendChild(
+        button(x,()=>{
+          const f=c.querySelector('.feedback');
+
+          if(state.sceneTimer!==null)return;
+
+          if(x===s.reference){
+            f.textContent='Correct! ✨';
+            f.className='feedback good';
+            state.completedScenes.add(state.current);
+            state.sceneTimer=setTimeout(advance,700);
+          }else{
+            f.textContent='Try another reference.';
+            f.className='feedback retry';
+          }
+        },'game-choice')
+      );
+    });
+  };
+
+  learn();
+
+  // The quest Back button normally changes scenes.
+  // During the reference step, use it to review the completed verse instead.
+  const back=document.getElementById('scene-back');
+
+  if(back){
+    const normalBack=back.onclick;
+
+    back.onclick=()=>{
+      if(step==='reference' && verseBuilt){
+        clearSceneTimer();
+        stopNarration();
+        showBuiltVerse();
+        return;
+      }
+
+      normalBack();
+    };
+  }
+}  
+// Use the device voice when a recorded narration file is unavailable.
   function speakWithDevice(text){if(!text||!('speechSynthesis' in window))return;const u=new SpeechSynthesisUtterance(text);u.rate=.9;u.pitch=1.08;u.onstart=()=>window.FaithTrailsAudio?.duck();u.onend=()=>window.FaithTrailsAudio?.unduck();u.onerror=()=>window.FaithTrailsAudio?.unduck();state.narration=u;window.speechSynthesis.speak(u)}
   // Play recorded narration and fall back to the device voice if needed.
   function playNarration(file,text){stopNarration();if(!file)return speakWithDevice(text);const a=new Audio(`/api/narration/${encodeURIComponent(file)}`);state.narration=a;let fallbackUsed=false;a.addEventListener('play',()=>window.FaithTrailsAudio?.duck());a.addEventListener('ended',()=>window.FaithTrailsAudio?.unduck());a.addEventListener('error',()=>{if(fallbackUsed)return;fallbackUsed=true;state.narration=null;speakWithDevice(text)});a.play().catch(()=>{if(!fallbackUsed){fallbackUsed=true;state.narration=null;speakWithDevice(text)}})}

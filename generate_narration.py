@@ -21,7 +21,7 @@ SETUP
 3. Set ELEVENLABS_VOICE_ID_SERIES_1, ELEVENLABS_VOICE_ID_SERIES_2, and so on
    to the saved voice IDs you want. ELEVENLABS_VOICE_ID remains the fallback.
 4. Run from your project root (same folder as app.py):
-       python scripts/generate_narration.py
+       python generate_narration.py
 """
 
 import os
@@ -50,10 +50,21 @@ VOICE_SETTINGS = {
     "use_speaker_boost": True
 }
 
+# Series 4's chosen narrator needed cleaner settings to avoid distortion.
+# Keep the settings used for its existing narration when making new scenes.
+VOICE_SETTINGS_BY_SERIES = {
+    4: {
+        "stability": 0.65,
+        "similarity_boost": 0.75,
+        "style": 0.0,
+        "use_speaker_boost": False,
+    },
+}
+
 # ---- SCRIPT LOGIC -------------------------------------------------------
 
 
-def generate_audio(text, out_path, voice_id):
+def generate_audio(text, out_path, voice_id, series_number):
     """Request one MP3 from ElevenLabs and write it to the cache path."""
     url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
     headers = {
@@ -63,7 +74,7 @@ def generate_audio(text, out_path, voice_id):
     payload = {
         "text": text,
         "model_id": MODEL_ID,
-        "voice_settings": VOICE_SETTINGS
+        "voice_settings": VOICE_SETTINGS_BY_SERIES.get(series_number, VOICE_SETTINGS)
     }
 
     # A request is made only for content whose hash-based output file is absent.
@@ -104,7 +115,7 @@ def main():
             continue
 
         print(f"[gen]   Series {item['series_number']} · {item['key']} ...")
-        success = generate_audio(item["text"], out_path, voice_id)
+        success = generate_audio(item["text"], out_path, voice_id, item["series_number"])
         if success:
             generated += 1
             time.sleep(0.5)

@@ -1061,6 +1061,24 @@ QUEST_CONTENT.update(SERIES_3_CONTENT)
 QUEST_CONTENT.update(SERIES_4_CONTENT)
 QUEST_CONTENT.update(SERIES_5_CONTENT)
 
+# The Easy story remains the original approved script. Medium and Hard have
+# their own openings and endings for every quest, with matching audio keys.
+from story_variants import STORY_VARIANTS
+from story_middle_variants import MIDDLE_VARIANTS
+for slug, levels in STORY_VARIANTS.items():
+    quest = QUEST_CONTENT[slug]
+    story = quest["intro_scenes"] + quest["outro_scenes"]
+    for difficulty, variants in levels.items():
+        for index, text in variants.items():
+            story[index].setdefault("text_by_difficulty", {})[difficulty] = text
+for slug, paired_scenes in MIDDLE_VARIANTS.items():
+    quest = QUEST_CONTENT[slug]
+    story = quest["intro_scenes"] + quest["outro_scenes"]
+    if len(paired_scenes) != len(story) - 2:
+        raise ValueError(f"Story variation count mismatch for {slug}")
+    for scene, (medium, hard) in zip(story[1:-1], paired_scenes):
+        scene.setdefault("text_by_difficulty", {}).update(medium=medium, hard=hard)
+
 # Add a narration filename to every spoken part of every quest.
 NARRATION_INDEX = build_narration_index(
     QUEST_CONTENT,
@@ -1122,6 +1140,12 @@ def build_scenes(content, difficulty, slug=None):
         dict(scene)
         for scene in content["intro_scenes"] + content["outro_scenes"]
     ]
+    for scene in story_scenes:
+        if difficulty in scene.get("text_by_difficulty", {}):
+            scene["text"] = scene["text_by_difficulty"][difficulty]
+            scene["narration_file"] = scene["narration_by_difficulty"][difficulty]
+        scene.pop("text_by_difficulty", None)
+        scene.pop("narration_by_difficulty", None)
     if slug:
         for index, scene in enumerate(story_scenes, start=1):
             relative_image = f"{slug}/{index:02}.webp"

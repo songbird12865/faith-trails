@@ -1,0 +1,43 @@
+Faith-Trails update — September 25, 2026
+
+Changed files:
+  app.py
+  narration_utils.py
+  story_variants.py (new)
+  story_middle_variants.py (new)
+  static/js/game.js
+  static/css/style.css
+
+Quest navigation:
+  Trail Map, Back, and Continue are arranged across the bottom of story scenes.
+  Back is disabled on the first scene. A player can go back through story,
+  questions, and activities during the current quest run. Completed questions,
+  activities, and the verse show a completed review screen on return, with a
+  Continue button; they do not need to be repeated. The progress bar shows the
+  farthest point reached. Leaving and reopening the quest starts a fresh run;
+  earned badges already saved in the database remain saved. A partially
+  completed activity is restarted if the player leaves that activity.
+
+Difficulty:
+  The old button-like difficulty badge has been removed from quest scenes.
+  A plain-text label now appears above the controls.
+
+Stories:
+  All 25 quests keep their original Easy story. Medium and Hard now have distinct wording on every story panel across
+  all 25 quests. Images, questions, verses, and activity order are unchanged.
+  story_variants.py contains the openings and endings;
+  story_middle_variants.py contains the panels between them.
+
+Before testing the new wording with recorded narration:
+  Generate the new ElevenLabs MP3s with the appropriate voice IDs and your
+  ELEVENLABS_API_KEY set, from the project's root directory:
+      python generate_narration.py
+  New story text has new audio filenames. Until its MP3 exists, the app falls
+  back to the device voice for that panel. Do not ship this update as a final
+  voiced Android build until the new recordings are present and reviewed.
+
+Deployment:
+  Copy the changed files to the same relative paths in your existing project.
+  Do not replace your existing faith_trails.db; that database contains saved
+  player profiles and badge progress. The full asset collection is not needed
+  for this update.
