@@ -6,6 +6,8 @@ Run with:  python app.py
 Then open: http://127.0.0.1:5000
 """
 # Import the tools used by the web server, database, and narration service.
+import hashlib
+import re
 import sqlite3
 import json
 import random
@@ -78,8 +80,10 @@ SERIES_VOICE_IDS = {
 }
 
 app = Flask(__name__)
-# Needed for Flask's session cookie (tracks which player is logged in).
-app.secret_key = os.environ.get("FAITH_TRAILS_SECRET_KEY", "faith-trails-local-development-key-change-in-production")
+# Set FAITH_TRAILS_SECRET_KEY to a stable private value in production.
+# A random fallback fails safely: restarts may require selecting a player again;
+# the independent persistent device cookie still retains access to the family.
+app.secret_key = os.environ.get("FAITH_TRAILS_SECRET_KEY", secrets.token_hex(32))
 _CATALOG_READY_DATABASES = set()
 
 
@@ -137,6 +141,51 @@ def keep_quest_catalog_current():
     db.commit()
     _CATALOG_READY_DATABASES.add(DB_PATH)
 
+
+
+@app.before_request
+def isolate_device_players():
+    """An opaque persistent cookie grants access only to this browser's family."""
+    if request.endpoint == "static":
+        return
+    db = get_db()
+    # Serialize the one-time migration across workers. Preserve IDs and badges;
+    # legacy records remain unowned rather than guessing their rightful family.
+    db.execute("BEGIN IMMEDIATE")
+    try:
+        columns = {r[1] for r in db.execute("PRAGMA table_info(users)")}
+        if "device_key" not in columns:
+            db.execute("""CREATE TABLE users_private (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL COLLATE NOCASE,
+                current_difficulty TEXT CHECK (current_difficulty IN ('easy','medium','hard')),
+                device_key TEXT,
+                UNIQUE(device_key, name)
+            )""")
+            db.execute("""INSERT INTO users_private (id, name, current_difficulty)
+                          SELECT id, name, current_difficulty FROM users""")
+            db.execute("DROP TABLE users")
+            db.execute("ALTER TABLE users_private RENAME TO users")
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    token = request.cookies.get("ft_device", "")
+    if not re.fullmatch(r"[0-9a-f]{64}", token):
+        token = secrets.token_hex(32)
+        session.pop("user_id", None)
+    g.device_token = token
+    g.device_key = hashlib.sha256(token.encode("ascii")).hexdigest()
+
+
+@app.after_request
+def persist_device_identity(response):
+    if hasattr(g, "device_token"):
+        response.set_cookie("ft_device", g.device_token, max_age=34560000,
+                            httponly=True, secure=request.is_secure,
+                            samesite="Lax", path="/")
+        response.headers["Cache-Control"] = "private, no-store"
+    return response
 
 
 # Each quest contains story scenes, an activity, quizzes, and a memory verse.
@@ -1118,7 +1167,7 @@ def get_current_user(db):
     if user_id is None:
         return None
     return db.execute(
-        "SELECT * FROM users WHERE id = ?", (user_id,)
+        "SELECT * FROM users WHERE id = ? AND device_key = ?", (user_id, g.device_key)
     ).fetchone()
 
 
@@ -1177,7 +1226,8 @@ def players():
     'New Player' tile that leads to create_profile.html."""
     db = get_db()
     all_players = db.execute(
-        "SELECT * FROM users ORDER BY name COLLATE NOCASE"
+        "SELECT * FROM users WHERE device_key = ? ORDER BY name COLLATE NOCASE",
+        (g.device_key,)
     ).fetchall()
     return render_template("players.html", players=all_players)
 
@@ -1188,7 +1238,7 @@ def select_player(user_id):
     then sends them to the trail map."""
     # Confirm the player exists before saving the login session.
     db = get_db()
-    user = db.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+    user = db.execute("SELECT * FROM users WHERE id = ? AND device_key = ?", (user_id, g.device_key)).fetchone()
     if user is None:
         abort(404)
     session["user_id"] = user_id
@@ -1207,7 +1257,7 @@ def new_player():
 def logout():
     """Clears who's logged in for this browser session. Doesn't touch
     any data -- the player's name, difficulty, and badges are all still
-    in the database, waiting for them (or anyone) to log back in."""
+    in the database, available only to this browser or app installation."""
     session.pop("user_id", None)
     return redirect(url_for("players"))
 
@@ -1517,7 +1567,7 @@ def api_quests():
 @app.route("/api/profile", methods=["POST"])
 def create_profile():
     """CREATE: registers a brand-new player (name and starting difficulty)
-    and logs them in for this session. Player names must be unique
+    and logs them in for this session. Player names must be unique within this device
     (case-insensitive) so the picker on the players can tell everyone
     apart."""
 
@@ -1535,17 +1585,21 @@ def create_profile():
     db = get_db()
     # Keep player names unique regardless of capitalization.
     existing = db.execute(
-        "SELECT id FROM users WHERE name = ? COLLATE NOCASE", (new_name,)
+        "SELECT id FROM users WHERE name = ? COLLATE NOCASE AND device_key = ?", (new_name, g.device_key)
     ).fetchone()
     if existing is not None:
         return jsonify({"error": "That name is already taken -- pick a different one"}), 409
 
     # Create the player and log them in for this browser session.
-    cursor = db.execute(
-        "INSERT INTO users (name, current_difficulty) VALUES (?, ?)",
-        (new_name, difficulty),
-    )
-    db.commit()
+    try:
+        cursor = db.execute(
+            "INSERT INTO users (name, current_difficulty, device_key) VALUES (?, ?, ?)",
+            (new_name, difficulty, g.device_key),
+        )
+        db.commit()
+    except sqlite3.IntegrityError:
+        db.rollback()
+        return jsonify({"error": "That name is already taken -- pick a different one"}), 409
     new_id = cursor.lastrowid
     session["user_id"] = new_id
 
@@ -1566,7 +1620,7 @@ def get_profile_route():
 def manage_player(user_id):
     """Manage a saved player from the picker without selecting that player."""
     db = get_db()
-    player = db.execute("SELECT id, name FROM users WHERE id = ?", (user_id,)).fetchone()
+    player = db.execute("SELECT id, name FROM users WHERE id = ? AND device_key = ?", (user_id, g.device_key)).fetchone()
     if player is None:
         return jsonify({"error": "Player not found"}), 404
 
@@ -1620,18 +1674,22 @@ def update_profile():
     # Check for a name conflict only when the name is changing.
     if new_name.lower() != profile["name"].lower():
         clash = db.execute(
-            "SELECT id FROM users WHERE name = ? COLLATE NOCASE AND id != ?",
-            (new_name, profile["id"]),
+            "SELECT id FROM users WHERE name = ? COLLATE NOCASE AND id != ? AND device_key = ?",
+            (new_name, profile["id"], g.device_key),
         ).fetchone()
         if clash is not None:
             return jsonify({"error": "That name is already taken -- pick a different one"}), 409
 
     # Save the updated name and difficulty together.
-    db.execute(
-        "UPDATE users SET name = ?, current_difficulty = ? WHERE id = ?",
-        (new_name, new_difficulty, profile["id"]),
-    )
-    db.commit()
+    try:
+        db.execute(
+            "UPDATE users SET name = ?, current_difficulty = ? WHERE id = ?",
+            (new_name, new_difficulty, profile["id"]),
+        )
+        db.commit()
+    except sqlite3.IntegrityError:
+        db.rollback()
+        return jsonify({"error": "That name is already taken -- pick a different one"}), 409
 
     return jsonify({"success": True, "id": profile["id"], "name": new_name, "difficulty": new_difficulty})
 
