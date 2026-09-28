@@ -120,7 +120,7 @@
     if(push)history.pushState({view:'quest',slug},'',`/quest/${slug}`);renderQuestShell();preloadNextSceneImage(-1);renderScene();
   }
   // Create the shared screen used by every quest.
-  function renderQuestShell(){const cover=img(state.quest.slug);questView.innerHTML=`<article class="quest-stage"><img class="quest-art-backdrop" src="${cover}" data-art-src="${cover}" alt="" decoding="async"><img class="quest-art" src="${cover}" data-art-src="${cover}" alt="${esc(state.quest.title)}" decoding="async"><div class="quest-art-shade"></div><div class="scene-panel"><div id="scene-content" class="scene-content"></div><p class="quest-difficulty">Difficulty: ${esc(boot.profile.current_difficulty)}</p><div class="quest-bottom"><button class="glass-button" id="map-back">← Trail Map</button><button class="glass-button" id="scene-back">← Back</button><div id="scene-controls" class="scene-controls"></div></div><div class="progress-track"><div id="progress-fill" class="progress-fill"></div></div></div></article>`;questView.querySelector('#map-back').onclick=showMap;questView.querySelector('#scene-back').onclick=goBack}  // Load the next distinct story illustration early to avoid a blank flash.
+  function renderQuestShell(){const cover=img(state.quest.slug);questView.innerHTML=`<article class="quest-stage"><div class="quest-art-frame"><img class="quest-art-backdrop" src="${cover}" data-art-src="${cover}" alt="" decoding="async"><img class="quest-art" src="${cover}" data-art-src="${cover}" alt="${esc(state.quest.title)}" decoding="async"><div class="quest-art-shade"></div></div><div class="scene-panel"><div id="scene-content" class="scene-content"></div><p class="quest-difficulty">Difficulty: ${esc(boot.profile.current_difficulty)}</p><div class="quest-bottom"><button class="glass-button" id="map-back">← Trail Map</button><button class="glass-button" id="scene-back">← Back</button><div id="scene-controls" class="scene-controls"></div></div><div class="progress-track"><div id="progress-fill" class="progress-fill"></div></div></div></article>`;questView.querySelector('#map-back').onclick=showMap;questView.querySelector('#scene-back').onclick=goBack}  // Load the next distinct story illustration early to avoid a blank flash.
   function preloadNextSceneImage(fromIndex)
   {
     const current=fromIndex>=0?sceneImg(state.scenes[fromIndex]):null;
@@ -161,7 +161,7 @@
     if(s.type==='story')renderStory(s,content,controls);else if(s.type==='quiz')renderQuiz(s,content);else if(s.type==='memory_verse')renderVerse(s,content,controls);else if(s.subtype==='matching')renderMatching(s,content,controls);else if(s.subtype==='color_picker')renderColors(s,content,controls);else if(s.subtype==='sequence')renderSequence(s,content,controls);
   }
   // Show a story page and its Continue button.
-  function renderStory(s,c,k){c.innerHTML=`<div class="scene-emoji">${s.emoji||'✨'}</div><h2 class="scene-title">${esc(state.quest.title)}</h2><p class="scene-text">${esc(s.text)}</p>`;k.appendChild(button('Continue →',advance))}
+  function renderStory(s,c,k){c.innerHTML=`<div class="scene-emoji">${s.emoji==='👨‍👩‍👧‍👦'?'<img class="people-icon" src="/static/img/people-icon.svg" alt="People">':s.emoji||'✨'}</div><h2 class="scene-title">${esc(state.quest.title)}</h2><p class="scene-text">${esc(s.text)}</p>`;k.appendChild(button('Continue →',advance))}
   function renderCompletedScene(s,c,k){
     const heading=s.type==='quiz'?'Question':s.type==='memory_verse'?'Memory Verse':'Activity';
     const detail=s.type==='memory_verse'?`“${esc(s.verse)}”<br>${esc(s.reference)}`:esc(s.prompt);
@@ -184,6 +184,7 @@ function renderVerse(s,c,k)
   let tray=[],built=[];
   let step='learn';
   let verseBuilt=false;
+  const verseInstructions='Tap the words in the correct order to build the Bible verse. The numbers show the sentence order. If you make a mistake, tap a word you placed to move it back.';
 
   const learn=()=>{
     c.innerHTML=`<div class="scene-emoji">📖</div>
@@ -200,10 +201,12 @@ function renderVerse(s,c,k)
     tray=[...words].sort(()=>Math.random()-.5);
     built=[];
     draw();
+    playNarration(null, verseInstructions);
   };
 
   const draw=()=>{
-    c.innerHTML='<h2 class="scene-title">Tap the words in order</h2><p class="scene-text">The numbers show the sentence order. Tap a placed word to move it back.</p><div class="assembly-line"></div><div class="item-tray"></div><p class="feedback"></p>';
+    c.innerHTML='<h2 class="scene-title">Tap the words in order</h2><p class="scene-text">The numbers show the sentence order. Tap a placed word to move it back.</p><button type="button" class="hear-instructions glass-button">🔊 Hear instructions</button><div class="assembly-line"></div><div class="item-tray"></div><p class="feedback"></p>';
+    c.querySelector('.hear-instructions').onclick=()=>playNarration(null,verseInstructions);
 
     built.forEach((x,i)=>
       c.querySelector('.assembly-line').appendChild(
@@ -268,6 +271,7 @@ function renderVerse(s,c,k)
 
   const reference=()=>{
     step='reference';
+    playNarration(null,'Where is this verse found? Tap the correct Bible reference.');
 
     c.innerHTML='<div class="scene-emoji">📍</div><h2 class="scene-title">Where is this verse found?</h2><div class="choice-grid"></div><p class="feedback"></p>';
 

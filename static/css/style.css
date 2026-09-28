@@ -311,3 +311,11 @@
   }
 
 }
+
+/* Keep artwork in normal document flow so long activities never overlap it. */
+.quest-art-frame{position:relative;height:clamp(180px,55vw,340px);overflow:hidden;flex-shrink:0}
+.quest-art-frame .quest-art,.quest-art-frame .quest-art-backdrop{height:100%}
+.quest-art-frame .quest-art-shade{background:linear-gradient(transparent 82%,#fff 100%);pointer-events:none}
+.quest-stage .scene-panel{margin-top:0;padding-top:1rem;background:#fff}
+.people-icon{display:inline-block;width:1em;height:1em;vertical-align:middle}
+.hear-instructions{margin:0 0 1rem;background:var(--deep);color:#fff}
