@@ -24,6 +24,7 @@ SETUP
        python generate_narration.py
 """
 
+import argparse
 import os
 import sys
 import time
@@ -78,7 +79,11 @@ def generate_audio(text, out_path, voice_id, series_number):
     }
 
     # A request is made only for content whose hash-based output file is absent.
-    response = requests.post(url, json=payload, headers=headers)
+    try:
+        response = requests.post(url, json=payload, headers=headers, timeout=60)
+    except requests.RequestException as exc:
+        print(f"  Request failed: {type(exc).__name__}")
+        return False
 
     if response.status_code != 200:
         print(f"  ERROR ({response.status_code}): {response.text[:200]}")
@@ -92,15 +97,33 @@ def generate_audio(text, out_path, voice_id, series_number):
 
 def main():
     """Generate only missing narration files and report cache usage."""
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--instructions-only', action='store_true',
+                        help='Generate only the new memory-verse instructions.')
+    parser.add_argument('--dry-run', action='store_true',
+                        help='List selected voices/files without contacting ElevenLabs.')
+    args = parser.parse_args()
+    items = [item for item in NARRATION_INDEX
+             if not args.instructions_only or item['key'].startswith('instructions__')]
+    if args.instructions_only and len(items) != 10:
+        print('Expected ten instruction clips. Install the updated narration_utils.py first.')
+        return 1
+    if args.dry_run:
+        for item in items:
+            cached = os.path.exists(os.path.join(OUTPUT_DIR, item['filename']))
+            print(f"Series {item['series_number']} | voice {item['voice_id']} | {'cached' if cached else 'new'} | {item['key']}")
+        print(f'Selected: {len(items)} clips. No audio requested.')
+        return 0
     if not API_KEY:
         print("ELEVENLABS_API_KEY environment variable is not set. Stopping.")
-        return
-    print(f"Found {len(NARRATION_INDEX)} narratable pieces of content.\n")
+        return 1
+    print(f"Found {len(items)} narratable pieces of content.\n")
 
     generated = 0
     skipped = 0
+    failed = 0
 
-    for item in NARRATION_INDEX:
+    for item in items:
         out_path = os.path.join(OUTPUT_DIR, item["filename"])
 
         # Hashes in filenames make an existing file safe to reuse: if narration
@@ -112,6 +135,7 @@ def main():
         voice_id = item.get("voice_id")
         if not voice_id or voice_id == "PASTE_YOUR_SAVED_VOICE_ID_HERE":
             print(f"[skip]  {item['key']} has no valid Series {item.get('series_number')} voice ID")
+            failed += 1
             continue
 
         print(f"[gen]   Series {item['series_number']} · {item['key']} ...")
@@ -119,9 +143,12 @@ def main():
         if success:
             generated += 1
             time.sleep(0.5)
+        else:
+            failed += 1
 
-    print(f"\nDone. Generated: {generated}, skipped (cached): {skipped}")
+    print(f"\nDone. Generated: {generated}, skipped (cached): {skipped}, failed: {failed}")
+    return 1 if failed else 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

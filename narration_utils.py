@@ -76,6 +76,21 @@ def build_narration_index(
             "voice_id": voice_id,
         })
 
+    instruction_texts = {
+        "build": "Tap the words in the correct order to build the Bible verse. The numbers show the sentence order. If you make a mistake, tap a word you placed to move it back.",
+        "reference": "Where is this verse found? Tap the correct Bible reference.",
+    }
+    instruction_files = {}
+    for series_number in sorted(set((quest_series or {}).values()) or {1}):
+        voice_id = series_voice_ids.get(series_number, legacy_voice_id)
+        instruction_files[series_number] = {}
+        for step, text in instruction_texts.items():
+            key = f"instructions__series_{series_number}__verse_{step}"
+            filename = narration_filename(key, text, voice_id, legacy_voice_id)
+            instruction_files[series_number][step] = filename
+            index.append({"key": key, "text": text, "filename": filename,
+                          "series_number": series_number, "voice_id": voice_id})
+
     for slug, quest in quest_content.items():
         series_number = quest_series.get(slug, 1)
 
@@ -116,6 +131,7 @@ def build_narration_index(
         for diff in DIFFICULTIES:
             for i, v in enumerate(verse_bank.get(diff, [])):
                 register(v, f"{slug}__verse__{diff}__{i}", "verse", series_number)
+                v["instruction_narration"] = instruction_files[series_number]
 
         if "lesson" in quest:
             voice_id = series_voice_ids.get(series_number, legacy_voice_id)

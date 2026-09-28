@@ -27,4 +27,4 @@
 <script id="game-bootstrap" type="application/json">{{ {'quests': quests, 'series': series, 'earned': earned, 'profile': {'id': profile['id'], 'name': profile['name'], 'current_difficulty': profile['current_difficulty']}, 'difficulties': difficulties, 'championNarrationFile': champion_narration_file, 'initialQuest': initial_quest}|tojson }}</script>
 {% endblock %}
 {# Load the game engine only on the adventure page. #}
-{% block scripts %}<script src="{{ url_for('static',filename='js/game.js') }}?v=3"></script>{% endblock %}
+{% block scripts %}<script src="{{ url_for('static',filename='js/game.js') }}?v=4"></script>{% endblock %}

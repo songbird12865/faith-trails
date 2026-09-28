@@ -184,7 +184,6 @@ function renderVerse(s,c,k)
   let tray=[],built=[];
   let step='learn';
   let verseBuilt=false;
-  const verseInstructions='Tap the words in the correct order to build the Bible verse. The numbers show the sentence order. If you make a mistake, tap a word you placed to move it back.';
 
   const learn=()=>{
     c.innerHTML=`<div class="scene-emoji">📖</div>
@@ -201,12 +200,12 @@ function renderVerse(s,c,k)
     tray=[...words].sort(()=>Math.random()-.5);
     built=[];
     draw();
-    playNarration(null, verseInstructions);
+    playInstruction(s.instruction_narration?.build);
   };
 
   const draw=()=>{
     c.innerHTML='<h2 class="scene-title">Tap the words in order</h2><p class="scene-text">The numbers show the sentence order. Tap a placed word to move it back.</p><button type="button" class="hear-instructions glass-button">🔊 Hear instructions</button><div class="assembly-line"></div><div class="item-tray"></div><p class="feedback"></p>';
-    c.querySelector('.hear-instructions').onclick=()=>playNarration(null,verseInstructions);
+    c.querySelector('.hear-instructions').onclick=()=>playInstruction(s.instruction_narration?.build);
 
     built.forEach((x,i)=>
       c.querySelector('.assembly-line').appendChild(
@@ -271,7 +270,7 @@ function renderVerse(s,c,k)
 
   const reference=()=>{
     step='reference';
-    playNarration(null,'Where is this verse found? Tap the correct Bible reference.');
+    playInstruction(s.instruction_narration?.reference);
 
     c.innerHTML='<div class="scene-emoji">📍</div><h2 class="scene-title">Where is this verse found?</h2><div class="choice-grid"></div><p class="feedback"></p>';
 
@@ -321,6 +320,18 @@ function renderVerse(s,c,k)
 }  
 // Use the device voice when a recorded narration file is unavailable.
   function speakWithDevice(text){if(!text||!('speechSynthesis' in window))return;const u=new SpeechSynthesisUtterance(text);u.rate=.9;u.pitch=1.08;u.onstart=()=>window.FaithTrailsAudio?.duck();u.onend=()=>window.FaithTrailsAudio?.unduck();u.onerror=()=>window.FaithTrailsAudio?.unduck();state.narration=u;window.speechSynthesis.speak(u)}
+  // Instructions use the series recording only, never the device voice.
+  function playInstruction(file){
+    stopNarration();
+    if(!file){toast('Instruction audio is not available yet. Please follow the words on screen.');return}
+    const a=new Audio(`/static/audio/quests/${encodeURIComponent(file)}`);
+    state.narration=a;
+    a.addEventListener('play',()=>window.FaithTrailsAudio?.duck());
+    a.addEventListener('ended',()=>window.FaithTrailsAudio?.unduck());
+    const unavailable=()=>{if(state.narration!==a)return;window.FaithTrailsAudio?.unduck();toast('Tap Hear instructions to retry, or follow the words on screen.');};
+    a.addEventListener('error',unavailable);
+    a.play().catch(unavailable);
+  }
   // Play recorded narration and fall back to the device voice if needed.
   function playNarration(file,text){stopNarration();if(!file)return speakWithDevice(text);const a=new Audio(`/api/narration/${encodeURIComponent(file)}`);state.narration=a;let fallbackUsed=false;a.addEventListener('play',()=>window.FaithTrailsAudio?.duck());a.addEventListener('ended',()=>window.FaithTrailsAudio?.unduck());a.addEventListener('error',()=>{if(fallbackUsed)return;fallbackUsed=true;state.narration=null;speakWithDevice(text)});a.play().catch(()=>{if(!fallbackUsed){fallbackUsed=true;state.narration=null;speakWithDevice(text)}})}
   // Stop any recorded or device narration that is playing.
