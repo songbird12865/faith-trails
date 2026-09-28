@@ -322,3 +322,16 @@
 
 /* Fill the illustration frame edge to edge; crop excess at the edges. */
 .quest-art-frame .quest-art{object-fit:cover;object-position:center}
+
+/* Constrain long next-step labels to their own grid cell. */
+.quest-bottom{grid-template-columns:auto auto minmax(0,1fr)}
+.quest-bottom .scene-controls{min-width:0;max-width:100%;width:100%}
+.quest-bottom .scene-controls .primary-button{
+  box-sizing:border-box;min-width:0;max-width:100%;width:100%;
+  white-space:normal;overflow-wrap:anywhere;line-height:1.25;
+}
+@media(max-width:680px){
+  .quest-bottom .scene-controls .primary-button{
+    padding:.6rem .45rem;font-size:.78rem;
+  }
+}
