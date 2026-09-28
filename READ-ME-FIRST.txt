@@ -1,0 +1,33 @@
+MATCHING VOICE AND PICTURES UPDATE
+Replace the six enclosed files in their matching project folders.
+Keep app.py, the database, and the previous people-icon.svg unchanged.
+
+FIRST check the voices in your VS Code project terminal:
+python generate_narration.py --instructions-only --dry-run
+This lists ten clips and their configured voice IDs; it makes no API requests.
+The generator takes voices from the environment through app.py. It does not
+contain your five saved IDs. Missing settings fall back to a default voice.
+Verify these are the same series IDs used for your existing story recordings
+(and for PythonAnywhere) before generating. Series 4 should use your chosen
+Nhs7eitvQWFTQBsf0yiT voice. Share the dry-run output if unsure; do not share API keys.
+
+Once voices are verified:
+python generate_narration.py --instructions-only
+This generates only the ten missing instruction clips, preserving story audio.
+It uses existing voice settings, including Series 4's cleaner settings.
+Expected first successful run: Generated 10, failed 0 (cached clips are skipped).
+
+Then stage the six changed code/template files and the new instruction MP3s:
+git add generate_narration.py narration_utils.py static/js/game.js static/css/style.css templates/base.html templates/game.html
+git add -- "static/audio/quests/instructions__*.mp3"
+git commit -m "Fill artwork frames and use series voices for verse instructions"
+git push origin main
+
+On PythonAnywhere: git pull origin main, then Reload from the Web tab.
+Close/reopen the phone app and test pictures, verse instructions, and replay.
+Pictures fill the frame with some edge cropping; text remains below them.
+Instruction playback never falls back to the phone voice.
+
+Verified with mocked audio requests: instructions-only selects exactly ten
+clips across five series; dry-run requests no audio. No paid generation was
+performed here. Real-device layout and recordings need verification.
