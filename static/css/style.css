@@ -321,7 +321,7 @@
 .hear-instructions{margin:0 0 1rem;background:var(--deep);color:#fff}
 
 /* Fill the illustration frame edge to edge; crop excess at the edges. */
-.quest-art-frame .quest-art{object-fit:cover;object-position:center}
+.quest-art-frame .quest-art{object-fit:contain;object-position:center}
 
 /* Constrain long next-step labels to their own grid cell. */
 .quest-bottom{grid-template-columns:auto auto minmax(0,1fr)}
