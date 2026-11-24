@@ -335,3 +335,11 @@
     padding:.6rem .45rem;font-size:.78rem;
   }
 }
+
+/* Landing screen: original full-color artwork, no overlay. */
+.audio-gate{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:0;background:#082e20;overflow-y:auto;overscroll-behavior:contain;padding:0 0 env(safe-area-inset-bottom,0px);}
+.audio-gate .landing-art{display:block;width:min(100%, 64svh);height:auto;flex-shrink:0;object-fit:contain;}
+.audio-gate .audio-gate-card{width:100%;max-width:620px;flex-shrink:0;padding:clamp(18px,4svh,34px) 16px;background:none;box-shadow:none;backdrop-filter:none;border-radius:0;animation:none;text-shadow:none;}
+.audio-gate #start-adventure{width:min(80%,420px);font-size:clamp(1.2rem,5vw,1.65rem);min-height:48px;}
+.audio-gate .music-credit{position:static;transform:none;width:calc(100% - 24px);max-width:620px;margin:auto 0 16px;padding:12px 0 0;flex-shrink:0;font-size:clamp(.75rem,2.9vw,.9rem);line-height:1.5;}
+.audio-gate #start-adventure:focus-visible,.audio-gate a:focus-visible{outline:3px solid #fff;outline-offset:4px;}

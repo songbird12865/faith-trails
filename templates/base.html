@@ -17,7 +17,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
  
   <!-- The custom stylesheet adds the game map, activities, and animations. -->
-  <link rel="stylesheet" href="{{ url_for('static',filename='css/style.css') }}?v=5">
+  <link rel="stylesheet" href="{{ url_for('static',filename='css/style.css') }}?v=7">
   {% block head %}{% endblock %}
 </head>
 <body class="bg-parchment text-inkbrown font-body min-h-screen">
@@ -27,9 +27,9 @@
   <audio id="celebration-music" loop preload="auto"><source src="{{ url_for('static',filename='music/celebration_theme.mp3') }}" type="audio/mpeg"></audio>
   
   <!-- This start screen gives mobile browsers the tap required to play audio. -->
-  <div id="audio-gate" class="audio-gate" role="dialog" aria-modal="true">
-    <div class="audio-gate-shade" aria-hidden="true"></div>
-    <div class="audio-gate-card"><div class="gate-compass">🧭</div><h1>Faith Trails</h1><p>A Closer Walk for Kids</p><button id="start-adventure">Start Adventure</button></div>
+  <div id="audio-gate" class="audio-gate" role="dialog" aria-modal="true" aria-label="Faith-Trails: A Closer Walk for Kids">
+    <img class="landing-art" src="{{ url_for('static',filename='img/faith-trails-landing.png') }}" alt="Faith-Trails — A Closer Walk for Kids">
+    <div class="audio-gate-card"><button id="start-adventure" type="button">Start Adventure</button></div>
     <p class="music-credit">
       Music provided by FiftySounds ·
       <a href="https://www.fiftysounds.com/"
@@ -45,6 +45,7 @@
         www.elevenlabs.io
       </a>
       <br>
+      <a href="https://acloserwalk.org/" target="_blank" rel="noopener noreferrer">Support</a> ·
       <a href="/privacy" target="_blank" rel="noopener noreferrer">
           Privacy Policy
       </a>
